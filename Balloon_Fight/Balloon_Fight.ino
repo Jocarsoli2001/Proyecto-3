@@ -9,6 +9,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <TM4C123GH6PM.h>
+#include <SPI.h>
+
 #include "inc/hw_ints.h"
 #include "inc/hw_memmap.h"
 #include "inc/hw_types.h"
@@ -23,13 +25,25 @@
 #include "bitmaps.h"
 #include "font.h"
 #include "lcd_registers.h"
+#include <SD.h>
+
+//***************************************************************************************************************************************
+// Definiciones de pines
+//***************************************************************************************************************************************
 
 #define LCD_RST PD_0
 #define LCD_CS PD_1
 #define LCD_RS PD_2
 #define LCD_WR PD_3
 #define LCD_RD PE_1
+#define Jugador_1 PF_0
+
+//***************************************************************************************************************************************
+// Variables
+//***************************************************************************************************************************************
 int DPINS[] = {PB_0, PB_1, PB_2, PB_3, PB_4, PB_5, PB_6, PB_7};
+uint8_t Estado_J1 = 0;
+
 //***************************************************************************************************************************************
 // Functions Prototypes
 //***************************************************************************************************************************************
@@ -47,24 +61,27 @@ void LCD_Print(String text, int x, int y, int fontSize, int color, int backgroun
 void LCD_Bitmap(unsigned int x, unsigned int y, unsigned int width, unsigned int height, unsigned char bitmap[]);
 void LCD_Sprite(int x, int y, int width, int height, unsigned char bitmap[], int columns, int index, char flip, char offset);
 
-
 extern uint8_t fondo[];
 //***************************************************************************************************************************************
 // Inicialización
 //***************************************************************************************************************************************
 void setup() {
+  
   SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
   Serial.begin(115200);
   GPIOPadConfigSet(GPIO_PORTB_BASE, 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7, GPIO_STRENGTH_8MA, GPIO_PIN_TYPE_STD_WPU);
   Serial.println("Inicio");
+  SPI.setModule(0);
   LCD_Init();
   LCD_Clear(0x00);
+
+  pinMode(Jugador_1, INPUT_PULLUP);                             
 //  FillRect(0, 0, 319, 239, 0xFFFF);
 //    FillRect(50, 60, 20, 20, 0xF800);
 //    FillRect(70, 60, 20, 20, 0x07E0);
 //    FillRect(90, 60, 20, 20, 0x001F);
 
-  FillRect(0, 0, 319, 206, 0x74DA);
+  FillRect(0, 0, 319, 239, 0x0000);
   //String text1 = "Hola Mundo";
   //LCD_Print(text1, 20, 100, 2, 0x001F, 0xCAB9);
 
@@ -77,7 +94,7 @@ void setup() {
   
   
   //LCD_Bitmap(unsigned int x, unsigned int y, unsigned int width, unsigned int height, unsigned char bitmap[]);
-  LCD_Bitmap(0, 0, 320, 240, fondo);
+//  LCD_Bitmap(0, 0, 320, 240, fondo);
 
 //  for(int x = 0; x <319; x++){
 //    LCD_Bitmap(x, 116, 16, 16, tile);
@@ -93,19 +110,25 @@ void setup() {
 // Loop Infinito
 //***************************************************************************************************************************************
 void loop() {
+  
+  
+  for (int a = 0; a < 239 - 24; a++) {
+    
+      int anim2 = (a / 10) % 4;
+      int y = (0.5)*(9.8)*((a)^2);
+      LCD_Sprite(159,a,16,24,J1,5,anim2,1,0);
+      H_line(159 , a -1, 16, 0x0000);
+    
+    delay(5);
+  }
 
-  for (int x = 0; x < 320 - 16; x++) {
-    int anim2 = (x / 10) % 4;
-    LCD_Sprite(x,100,16,16,kirbys,4,anim2,0,0);
-    V_line( x -1, 100, 16, 0x74DA);
-    delay(15);
-  }
-  for (int x = 320-16; x > 0; x--) {
-    int anim2 = (x / 10) % 4;
-    LCD_Sprite(x,100,16,16,kirbys,4,anim2,1,0);
-    V_line( x +16, 100, 16, 0x74DA);
-    delay(15);
-  }
+  
+//  for (int x = 320-16; x > 0; x--) {
+//    int anim2 = (x / 10) % 4;
+//    LCD_Sprite(x,100,16,24,J1,5,anim2,0,0);
+//    V_line( x +16, 100, 16, 0x0000);
+//    delay(5);
+//  }
   /* for(int x = 0; x <320-32; x++){
      delay(15);
      int anim2 = (x/35)%2;
