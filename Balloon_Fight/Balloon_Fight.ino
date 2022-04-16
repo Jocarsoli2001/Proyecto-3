@@ -36,15 +36,23 @@
 #define LCD_RS PD_2
 #define LCD_WR PD_3
 #define LCD_RD PE_1
-#define Jugador_1 PF_0
+#define Jugador_1 PE_4
+#define Izquierda_J1 PA_7
+#define Derecha_J1 PC_7
 
 //***************************************************************************************************************************************
 // Variables
 //***************************************************************************************************************************************
 int DPINS[] = {PB_0, PB_1, PB_2, PB_3, PB_4, PB_5, PB_6, PB_7};
-uint8_t Estado_J1 = 0;
-
+int Estado_J1 = 0;
+int presionado_J1 = 0;
+int IZ_J1 = 0;
+int DE_J1 = 0;
+int flip = 0;
+int volando = 0;
 int Game_Over = 0;
+
+
 
 //***************************************************************************************************************************************
 // Functions Prototypes
@@ -77,7 +85,9 @@ void setup() {
   LCD_Init();
   LCD_Clear(0x00);
 
-  pinMode(Jugador_1, INPUT_PULLUP);                             
+  pinMode(Jugador_1, INPUT);
+  pinMode(Izquierda_J1, INPUT);
+  pinMode(Derecha_J1, INPUT);                             
 //  FillRect(0, 0, 319, 239, 0xFFFF);
 //    FillRect(50, 60, 20, 20, 0xF800);
 //    FillRect(70, 60, 20, 20, 0x07E0);
@@ -113,102 +123,155 @@ void setup() {
 //***************************************************************************************************************************************
 void loop() {
   //***********************************************************************************************************************************
-  // Implementación de física
+  // Variables comunes
   //***********************************************************************************************************************************
-  int cont_anim1 = 0;
-  float y = 0;
-  float V = 0;
-  float A = 0.004;
   float t = 1.5;
+  int cont_anim1 = 0;
+  int flap = 0;
+  
+  //***********************************************************************************************************************************
+  // Variables jugador (eje y)
+  //***********************************************************************************************************************************
+  float y = 100;
+  float Vy = 0;
+  float Vy_prev = 0;
+  float Delta_V = 0;
+  float Ay = 0.007;
+  
+  //***********************************************************************************************************************************
+  // Variables jugador (eje x)
+  //***********************************************************************************************************************************
+  float x = 50;
+  float Vx = 0;
+  float Ax = 0;
 
   while(Game_Over == 0) {
     //***********************************************************************************************************************************
-    // Implementación de física
+    // For Loop para prevenir error en pared
     //***********************************************************************************************************************************
+    
+    //***********************************************************************************************************************************
+    // Implementación de física (eje x)
+    //***********************************************************************************************************************************
+    IZ_J1 = digitalRead(Izquierda_J1);
+    DE_J1 = digitalRead(Derecha_J1);
+    
+    if(IZ_J1 == HIGH)                                             // En el eje x, cuando se presiona el botón para mover a la izquierda, se agrega una velocidad en el eje x-, por lo va a la izquierda
+    {
+      Vx -= 0.05;                                                 
+      Ax = -0.002;                                                // Se genera una aceleración para un giro más suave
+      flip = 0;                                                   // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
+    }
+    if(DE_J1 == HIGH){                                            // En el eje x, cuando se presiona el botón para mover a la derecha, se agrega una velocidad en el eje x+, por lo va a la derecha
+      Vx += 0.005;
+      Ax = 0.002;                                                 // Se genera una aceleración para un giro más suave
+      flip = 1;                                                   // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
+    }
+    else if (IZ_J1 == LOW && DE_J1 == LOW){                       // Si no se detecta algun cambio en ninguno de los dos botones de movimiento horizontal, apagar la aceleración. 
+      Ax = 0;
+    }
 
-    if(V<1 && V>-1){
-      V += A*(t);
+    if(Vx<=0.5 && Vx>=-0.5){                                      // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+      Vx += Ax*(t);
+    }
+    else if(Vx>0.5){
+      Vx = 0.5;                                                   // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+    }
+    else if(Vx<-0.5){
+      Vx = -0.5;                                                  // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+    }
+
+    /* 
+     * Para lograr que el sprite aparezca hacia arriba cuando este atraviesa la pared de abajo, se hizo que se fuera a la coordenada "x = 0" cuando la misma se volviera mayor a 320 (límite de pantalla).
+     * Lo mismo sucede si supera la coordenada "x = 320", el sprite se mueve a la coordenada "x = 0".
+     */
+    if(x > 320){
+      x = 0;
+    }
+    else if(x < 0){
+      x = 320;
+      FillRect(0, 0, 19, 239, 0x0000);                            // Si el jugador sobrepasa la coordenada "x = 0", entonces hacer un rectángulo vertical para que no queden marcas del sprite.
+    }
+    else{
+      x += Vx*(t) + (0.5)*Ax*(t*t);
     }
     
-    if(y > 240){
+    //***********************************************************************************************************************************
+    // Implementación de física (eje y)
+    //***********************************************************************************************************************************
+    Estado_J1 = digitalRead(Jugador_1);
+    
+    if(Estado_J1 == HIGH)                                         // Observar si J1 está presionado
+    {
+      presionado_J1 = 1;                                          // Cambiar estado de variable J1
+    }
+    if (Estado_J1 == LOW && presionado_J1 == 1 )                  // Detectar cuando el botón J1 se soltó
+    {
+      Vy -= 0.5;                                                  // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
+      presionado_J1 = 0;                                          // Cambiar variable presionado_J1 como antirebote
+    }
+    
+    if(Vy<=1 && Vy>=-1){                                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+      Vy += Ay*(t);
+    }
+    else if(Vy>1){
+      Vy = 1;                                                     // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+    }
+    else if(Vy<-1){
+      Vy = -1;                                                    // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+    }
+
+    /* 
+     * Para lograr que el sprite aparezca hacia arriba cuando este atraviesa la pared de abajo, se hizo que se fuera a la coordenada "y = 0" cuando la misma se volviera mayor a 240 (límite de pantalla).
+     * Lo mismo sucede si supera la coordenada "y = 240", el sprite se mueve a la coordenada "y = 0".
+     */
+    if(y > 240){                                        
       y = 0;
     }
     else if(y < 0){
       y = 240;
+      FillRect(0, 0, 319, 28, 0x0000);                            // Si el jugador sobrepasa la coordenada "x = 0", entonces hacer un rectángulo vertical para que no queden marcas del sprite.
     }
     else{
-      y += V*(t) + (0.5)*A*(t*t);
+      y += Vy*(t) + (0.5)*Ay*(t*t);                               // Si el jugador se encuentra entre 0 y 240 en el eje y, la posición vertical está dada por esta fórmula
     }
+
+    //***********************************************************************************************************************************
+    // Comparación de velocidad
+    //***********************************************************************************************************************************
+    if(presionado_J1 == 1){
+      /*
+       * Cuando el jugador presiona el botón para generar el impulso hacia arriba, la variable "presionado_J1" se vuelve 1 mientras el botón está presionado y hasta que no se suelta el botón, no se
+       * genera el impulso hacia arriba. Por esto mismo se utilizó esto para generar la animación del aleteo. Cuando esta variable se vuelve 1, la animación se ve alterada y al estar corriendo el juego,
+       * el personaje pareciera aletear para adquirir cierta altura.
+       */
+      LCD_Sprite(int(x), int(y), 16, 24, J1, 5, 2, flip, 0);      
+    }
+    else{
+      LCD_Sprite(int(x), int(y), 16, 24, J1, 5, 3, flip, 0);
+    }
+    
 
     //***********************************************************************************************************************************
     // Sprite J1
     //***********************************************************************************************************************************
-    cont_anim1 += 1;
-    int anim1 = (cont_anim1 / 10) % 5;
-    LCD_Sprite(159, int(y), 16, 24, J1, 5, anim1, 1, 0);
+    /*
+       * Para evitar que el jugador deje un rastro de pixeles se generó un cuadro negro alrededor del mismo y así cubrir todo el espacio con color negro.
+    */
+    V_line(int(x)-1, int(y), 24, 0x0000);
+    V_line(int(x)-2, int(y), 24, 0x0000);
+    V_line(int(x)+17, int(y), 24, 0x0000);
+    V_line(int(x)+18, int(y), 24, 0x0000);
     
-    H_line(159, int(y)-1, 16, 0x0000);
-    H_line(159, int(y)-2, 16, 0x0000);
-    H_line(159, int(y)+25, 16, 0x0000);
-    H_line(159, int(y)+26, 16, 0x0000);
+    H_line(int(x)-2, int(y)-1, 20, 0x0000);
+    H_line(int(x)-2, int(y)-2, 20, 0x0000);
+    H_line(int(x)-2, int(y)+25, 20, 0x0000);
+    H_line(int(x)-2, int(y)+26, 20, 0x0000);
     
     delay(5);
+
   }
 
-  
-//  for (int x = 320-16; x > 0; x--) {
-//    int anim2 = (x / 10) % 4;
-//    LCD_Sprite(x,100,16,24,J1,5,anim2,0,0);
-//    V_line( x +16, 100, 16, 0x0000);
-//    delay(5);
-//  }
-  /* for(int x = 0; x <320-32; x++){
-     delay(15);
-     int anim2 = (x/35)%2;
-
-     LCD_Sprite(x,100,16,24,planta,2,anim2,0,1);
-     V_line( x -1, 100, 24, 0x421b);
-
-     //LCD_Bitmap(x, 100, 32, 32, prueba);
-
-     int anim = (x/11)%8;
-
-
-     int anim3 = (x/11)%4;
-
-     LCD_Sprite(x, 20, 16, 32, mario,8, anim,1, 0);
-     V_line( x -1, 20, 32, 0x421b);
-
-     //LCD_Sprite(x,100,32,32,bowser,4,anim3,0,1);
-     //V_line( x -1, 100, 32, 0x421b);
-
-
-     LCD_Sprite(x, 140, 16, 16, enemy,2, anim2,1, 0);
-     V_line( x -1, 140, 16, 0x421b);
-
-     LCD_Sprite(x, 175, 16, 32, luigi,8, anim,1, 0);
-     V_line( x -1, 175, 32, 0x421b);
-    }
-    for(int x = 320-32; x >0; x--){
-     delay(5);
-     int anim = (x/11)%8;
-     int anim2 = (x/11)%2;
-
-     LCD_Sprite(x,100,16,24,planta,2,anim2,0,0);
-     V_line( x + 16, 100, 24, 0x421b);
-
-     //LCD_Bitmap(x, 100, 32, 32, prueba);
-
-     //LCD_Sprite(x, 140, 16, 16, enemy,2, anim2,0, 0);
-     //V_line( x + 16, 140, 16, 0x421b);
-
-     //LCD_Sprite(x, 175, 16, 32, luigi,8, anim,0, 0);
-     //V_line( x + 16, 175, 32, 0x421b);
-
-     //LCD_Sprite(x, 20, 16, 32, mario,8, anim,0, 0);
-     //V_line( x + 16, 20, 32, 0x421b);
-    }
-  */
 }
 //***************************************************************************************************************************************
 // Función para inicializar LCD
@@ -220,7 +283,7 @@ void LCD_Init(void) {
   pinMode(LCD_WR, OUTPUT);
   pinMode(LCD_RD, OUTPUT);
   for (uint8_t i = 0; i < 8; i++) {
-    pinMode(DPINS[i], OUTPUT);
+  pinMode(DPINS[i], OUTPUT);
   }
   //****************************************
   // Secuencia de Inicialización
