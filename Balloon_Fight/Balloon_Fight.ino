@@ -39,7 +39,7 @@
 #define Jugador_1 PE_4
 #define Izquierda_J1 PA_7
 #define Derecha_J1 PC_7
-#define Gravedad 0.004
+#define Gravedad 0.001
 
 //***************************************************************************************************************************************
 // Variables
@@ -56,6 +56,37 @@ int overlap_J1 = 0;
 int region_obs1 = 0;
 int vector_x1 = 0;
 int vector_y1 = 0;
+
+  //***********************************************************************************************************************************
+  // Variables comunes
+  //***********************************************************************************************************************************
+  float t = 1.5;
+  int cont_anim1 = 0;
+  int flap = 0;
+  int pintar_iz = 0;
+  int pintar_der = 0;
+  int pintar_arriba = 0;
+  int pintar_abajo = 0;
+  int parado = 0;
+  int refresh = 0;
+  
+  //***********************************************************************************************************************************
+  // Variables jugador (eje y)
+  //***********************************************************************************************************************************
+  float y = 100;
+  float yf = 0;
+  float Vy = 0;
+  float y_prev = 0;
+  float Ay = Gravedad;
+  
+  //***********************************************************************************************************************************
+  // Variables jugador (eje x)
+  //***********************************************************************************************************************************
+  float x = 50;
+  float xf = 0;
+  float Vx = 0;
+  float x_prev = 0;
+  float Ax = 0;
 
 
 //***************************************************************************************************************************************
@@ -95,7 +126,7 @@ void setup() {
 
 
   FillRect(0, 0, 319, 239, 0x0000);
-  FillRect(106, 119, 107, 40, 0x2703);
+  FillRect(106 + 4, 119 + 4, 107 - 6, 40 - 6, 0x2703);
 
 
 }
@@ -103,36 +134,7 @@ void setup() {
 // Loop Infinito
 //***************************************************************************************************************************************
 void loop() {
-  //***********************************************************************************************************************************
-  // Variables comunes
-  //***********************************************************************************************************************************
-  float t = 1.5;
-  int cont_anim1 = 0;
-  int flap = 0;
-  int pintar_iz = 0;
-  int pintar_der = 0;
-  int pintar_arriba = 0;
-  int pintar_abajo = 0;
-  int parado = 0;
   
-  //***********************************************************************************************************************************
-  // Variables jugador (eje y)
-  //***********************************************************************************************************************************
-  float y = 100;
-  float yf = 0;
-  float Vy = 0;
-  float y_prev = 0;
-  float Ay = Gravedad;
-  
-  //***********************************************************************************************************************************
-  // Variables jugador (eje x)
-  //***********************************************************************************************************************************
-  float x = 50;
-  float xf = 0;
-  float Vx = 0;
-  float x_prev = 0;
-  float Ax = 0;
-
   while(Game_Over == 0) {
     //***********************************************************************************************************************************
     // Implementación de física (eje x)
@@ -142,12 +144,12 @@ void loop() {
     
     if(IZ_J1 == HIGH)                                             // En el eje x, cuando se presiona el botón para mover a la izquierda, se agrega una velocidad en el eje x-, por lo va a la izquierda
     {
-      Vx -= 0.004;                                                 
+      Vx -= 0.003;                                                 
       Ax = -0.0007;                                               // Se genera una aceleración para un giro más suave
       flip = 0;                                                   // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
     if(DE_J1 == HIGH){                                            // En el eje x, cuando se presiona el botón para mover a la derecha, se agrega una velocidad en el eje x+, por lo va a la derecha
-      Vx += 0.004;
+      Vx += 0.003;
       Ax = 0.0007;                                                // Se genera una aceleración para un giro más suave
       flip = 1;                                                   // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
@@ -197,18 +199,18 @@ void loop() {
     }
     if (Estado_J1 == LOW && presionado_J1 == 1 )                  // Detectar cuando el botón J1 se soltó
     {
-      Vy -= 0.4;                                                  // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
+      Vy -= 0.2;                                                  // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
       presionado_J1 = 0;                                          // Cambiar variable presionado_J1 como antirebote
     }
     
-    if(Vy<=0.7 && Vy>=-0.7){                                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+    if(Vy<=0.5 && Vy>=-0.5){                                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
       Vy += Ay*(t);
     }
-    else if(Vy>0.7){
-      Vy = 0.7;                                                     // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+    else if(Vy>0.5){
+      Vy = 0.5;                                                     // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
     }
-    else if(Vy<-0.7){
-      Vy = -0.7;                                                    // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+    else if(Vy<-0.5){
+      Vy = -0.5;                                                    // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
     }
 
     /* 
@@ -254,17 +256,13 @@ void loop() {
     if(overlap_J1 == 1){
       region_obs1 = Regiones(int(x), int(y), 24, 16, 106, 119, 107, 40);
       
-      
       // Si se encuentra en la región superior al obstáculo
       if(region_obs1 == 1){ 
-
+        
         // Pintar borde superior, izquierdo y derecho.
-        H_line(int(x)-2, int(y)-1, 20, 0x0000);
-        H_line(int(x)-2, int(y)-2, 20, 0x0000); 
+        H_line(int(x)-2, int(y)-1, 20, 0x0000); 
         V_line(int(x)+17, int(y), 24, 0x0000);
-        V_line(int(x)+18, int(y), 24, 0x0000);
         V_line(int(x)-1, int(y), 24, 0x0000);
-        V_line(int(x)-2, int(y), 24, 0x0000);
 
         // Alteración a velocidades y aceleración                                   
         Vy = 0;
@@ -276,11 +274,8 @@ void loop() {
 
         // Pintar borde superior, izquierdo y posterior.
         V_line(int(x)-1, int(y), 24, 0x0000);
-        V_line(int(x)-2, int(y), 24, 0x0000);
         H_line(int(x)-2, int(y)-1, 20, 0x0000);
-        H_line(int(x)-2, int(y)-2, 20, 0x0000);
         H_line(int(x)-2, int(y)+25, 20, 0x0000);
-        H_line(int(x)-2, int(y)+26, 20, 0x0000);
 
         // Alteración de la velocidad en x
         Vx = -Vx;
@@ -291,11 +286,8 @@ void loop() {
 
         // Pintar borde inferior, derecho y superior.
         V_line(int(x)+17, int(y), 24, 0x0000);
-        V_line(int(x)+18, int(y), 24, 0x0000);
         H_line(int(x)-2, int(y)-1, 20, 0x0000);
-        H_line(int(x)-2, int(y)-2, 20, 0x0000);
         H_line(int(x)-2, int(y)+25, 20, 0x0000);
-        H_line(int(x)-2, int(y)+26, 20, 0x0000);
 
         // Alteración de la velocidad en x y la aceleración en x
         Vx = -Vx;
@@ -307,11 +299,8 @@ void loop() {
 
         // Pintar borde inferior, izquierdo y derecho.
         V_line(int(x)+17, int(y), 24, 0x0000);
-        V_line(int(x)+18, int(y), 24, 0x0000);
         V_line(int(x)-1, int(y), 24, 0x0000);
-        V_line(int(x)-2, int(y), 24, 0x0000);
         H_line(int(x)-2, int(y)-1, 20, 0x0000);
-        H_line(int(x)-2, int(y)-2, 20, 0x0000);
 
         // Alteración de la velocidad en y
         Vy = -Vy;
@@ -319,7 +308,7 @@ void loop() {
 
       // Si se encuentra en una esquina
       else{
-
+        
         // Alterar tanto la velocidad en x y en "y"
         Vx = -Vx;
         Vy = -Vy;
@@ -334,13 +323,9 @@ void loop() {
 
       // Pintar todos los bordes exteriores para no dejar rastro en la LCD
       V_line(int(x)-1, int(y), 24, 0x0000);
-      V_line(int(x)-2, int(y), 24, 0x0000);
       V_line(int(x)+17, int(y), 24, 0x0000);
-      V_line(int(x)+18, int(y), 24, 0x0000);
       H_line(int(x)-2, int(y)-1, 20, 0x0000);
-      H_line(int(x)-2, int(y)-2, 20, 0x0000);
       H_line(int(x)-2, int(y)+25, 20, 0x0000);
-      H_line(int(x)-2, int(y)+26, 20, 0x0000);
 
       // Dejar la gravedad constante y la variable de si está parado, en 0
       Ay = Gravedad;
@@ -388,16 +373,16 @@ int Check_overlap(int posx_poligono, int posy_poligono, int posx_jugador, int po
  * colisionará y como deberá reaccionar a esto.
  */
 int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obstaculo, int posy_obstaculo, int ancho_obstaculo, int alto_obstaculo){
-  if(posx_J1 >= posx_obstaculo && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo) && posy_J1 <= (posy_obstaculo)){
+  if(posx_J1 >= (posx_obstaculo - (0.5)*ancho_J1) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && posy_J1 <= (posy_obstaculo)){
     return 1;                                                     // Pestaña superior al obstáculo
   }
-  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo) && (posy_J1 + alto_J1) >= posy_obstaculo && posx_J1 <= posx_obstaculo){
+  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo + (0.5)*alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo - (0.5)*alto_J1) && posx_J1 <= posx_obstaculo){
     return 2;                                                     // Pestaña central izquierda al obstáculo
   }
-  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo) && (posy_J1 + alto_J1) >= posy_obstaculo && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo)){
+  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo + (0.5)*alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo - (0.5)*alto_J1) && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo)){
     return 3;                                                     // Pestaña central derecha al obstáculo
   }
-  else if(posx_J1 >= posx_obstaculo && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo)){
+  else if(posx_J1 >= (posx_obstaculo - (0.5)*ancho_J1) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo)){
     return 4;                                                     // Pestaña posterior al obstáculo
   }
   else{
