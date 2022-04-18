@@ -257,7 +257,7 @@ void loop() {
       region_obs1 = Regiones(int(x), int(y), 24, 16, 106, 119, 107, 40);
       
       // Si se encuentra en la región superior al obstáculo
-      if(region_obs1 == 1){ 
+      if(region_obs1 == 1 || region_obs1 == 2 || region_obs1 == 3){ 
         
         // Pintar borde superior, izquierdo y derecho.
         H_line(int(x)-2, int(y)-1, 20, 0x0000); 
@@ -270,7 +270,7 @@ void loop() {
       }
 
       // Si se encuentra en la región central izquierda al obstáculo
-      else if(region_obs1 == 2){
+      else if(region_obs1 == 4 || region_obs1 == 5 || region_obs1 == 6){
 
         // Pintar borde superior, izquierdo y posterior.
         V_line(int(x)-1, int(y), 24, 0x0000);
@@ -282,7 +282,7 @@ void loop() {
       }
 
       // Si se encuentra en la región central derecha al obstáculo
-      else if(region_obs1 == 3){
+      else if(region_obs1 == 7 || region_obs1 == 8 || region_obs1 == 9){
 
         // Pintar borde inferior, derecho y superior.
         V_line(int(x)+17, int(y), 24, 0x0000);
@@ -295,7 +295,7 @@ void loop() {
       }
 
       // Si se encuentra en la región posterior al obstáculo
-      else if(region_obs1 == 4){
+      else if(region_obs1 == 10 || region_obs1 == 11 || region_obs1 == 12){
 
         // Pintar borde inferior, izquierdo y derecho.
         V_line(int(x)+17, int(y), 24, 0x0000);
@@ -373,20 +373,64 @@ int Check_overlap(int posx_poligono, int posy_poligono, int posx_jugador, int po
  * colisionará y como deberá reaccionar a esto.
  */
 int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obstaculo, int posy_obstaculo, int ancho_obstaculo, int alto_obstaculo){
-  if(posx_J1 >= (posx_obstaculo - (0.5)*ancho_J1) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && posy_J1 <= (posy_obstaculo)){
+
+  //*************************************************************************************************************************************
+  // Condiciones en parte superior
+  //*************************************************************************************************************************************
+  if(posx_J1 >= (posx_obstaculo - ancho_J1) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + ancho_J1) && posy_J1 <= (posy_obstaculo)){
     return 1;                                                     // Pestaña superior al obstáculo
   }
-  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo + (0.5)*alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo - (0.5)*alto_J1) && posx_J1 <= posx_obstaculo){
-    return 2;                                                     // Pestaña central izquierda al obstáculo
+  else if(posx_J1 <= (posx_obstaculo - ancho_J1) && (posx_J1 + ancho_J1) >= (posx_obstaculo - ancho_J1) && posy_J1 <= (posy_obstaculo) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + ancho_J1)){
+    return 2;                                                     // Programación defensiva a si entra en esquinas
   }
-  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo + (0.5)*alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo - (0.5)*alto_J1) && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo)){
-    return 3;                                                     // Pestaña central derecha al obstáculo
+  else if(posx_J1 <= (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && posy_J1 <= (posy_obstaculo) && posx_J1 >= (posx_obstaculo - ancho_J1)){
+    return 3; 
   }
-  else if(posx_J1 >= (posx_obstaculo - (0.5)*ancho_J1) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo)){
-    return 4;                                                     // Pestaña posterior al obstáculo
+
+  //*************************************************************************************************************************************
+  // Condiciones en parte central izquierda
+  //*************************************************************************************************************************************
+  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo + alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo - alto_J1) && posx_J1 <= posx_obstaculo){
+    return 4;                                                     // Pestaña central izquierda al obstáculo
   }
+  else if(posy_J1 <= (posy_obstaculo - alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo) && posx_J1 <= posx_obstaculo){
+    return 5;                                                     // Pestaña central izquierda al obstáculo
+  }
+  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo + alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo + alto_J1) && posx_J1 <= posx_obstaculo){
+    return 6;                                                     // Pestaña central izquierda al obstáculo
+  }
+
+  //*************************************************************************************************************************************
+  // Condiciones en parte central derecha
+  //*************************************************************************************************************************************
+  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo + alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo - alto_J1) && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo)){
+    return 7;                                                     // Pestaña central derecha al obstáculo
+  }
+  else if(posy_J1 <= (posy_obstaculo - alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo) && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo)){
+    return 8;                                                     // Pestaña central derecha al obstáculo
+  }
+  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo + alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo + alto_J1) && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo)){
+    return 9;                                                     // Pestaña central izquierda al obstáculo
+  }
+
+  //*************************************************************************************************************************************
+  // Condiciones en parte posterior
+  //*************************************************************************************************************************************
+  else if(posx_J1 >= (posx_obstaculo - ancho_J1) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + ancho_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo)){
+    return 10;                                                     // Pestaña posterior al obstáculo
+  }
+  else if(posx_J1 <= (posx_obstaculo - ancho_J1) && (posx_J1 + ancho_J1) >= (posx_obstaculo - ancho_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + ancho_J1)){
+    return 11;                                                     // Programación defensiva a si entra en esquinas
+  }
+  else if(posx_J1 <= (posx_obstaculo + ancho_obstaculo + ancho_J1) && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo + ancho_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo) && posx_J1 >= (posx_obstaculo - ancho_J1)){
+    return 12;
+  }
+
+  //*************************************************************************************************************************************
+  // Condiciones en esquinas
+  //*************************************************************************************************************************************
   else{
-    return 5;                                                     // Esquinas del obstáculo (sin importancia)
+    return 13;                                                     // Esquinas del obstáculo (sin importancia)
   }
 }
 
