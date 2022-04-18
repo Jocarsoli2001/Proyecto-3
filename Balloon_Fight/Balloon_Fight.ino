@@ -39,6 +39,7 @@
 #define Jugador_1 PE_4
 #define Izquierda_J1 PA_7
 #define Derecha_J1 PC_7
+#define Gravedad 0.004
 
 //***************************************************************************************************************************************
 // Variables
@@ -94,7 +95,7 @@ void setup() {
 
 
   FillRect(0, 0, 319, 239, 0x0000);
-  FillRect(106, 119, 107, 80, 0x2703);
+  FillRect(106 + 4, 119 + 4, 107 - 4, 40 - 5, 0x2703);
 
 
 }
@@ -108,6 +109,10 @@ void loop() {
   float t = 1.5;
   int cont_anim1 = 0;
   int flap = 0;
+  int pintar_iz = 0;
+  int pintar_der = 0;
+  int pintar_arriba = 0;
+  int pintar_abajo = 0;
   
   //***********************************************************************************************************************************
   // Variables jugador (eje y)
@@ -116,7 +121,7 @@ void loop() {
   float yf = 0;
   float Vy = 0;
   float y_prev = 0;
-  float Ay = 0.007;
+  float Ay = Gravedad;
   
   //***********************************************************************************************************************************
   // Variables jugador (eje x)
@@ -142,7 +147,7 @@ void loop() {
     
     if(IZ_J1 == HIGH)                                             // En el eje x, cuando se presiona el botón para mover a la izquierda, se agrega una velocidad en el eje x-, por lo va a la izquierda
     {
-      Vx -= 0.05;                                                 
+      Vx -= 0.005;                                                 
       Ax = -0.002;                                                // Se genera una aceleración para un giro más suave
       flip = 0;                                                   // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
@@ -197,18 +202,18 @@ void loop() {
     }
     if (Estado_J1 == LOW && presionado_J1 == 1 )                  // Detectar cuando el botón J1 se soltó
     {
-      Vy -= 0.5;                                                  // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
+      Vy -= 0.4;                                                  // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
       presionado_J1 = 0;                                          // Cambiar variable presionado_J1 como antirebote
     }
     
-    if(Vy<=1 && Vy>=-1){                                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+    if(Vy<=0.7 && Vy>=-0.7){                                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
       Vy += Ay*(t);
     }
-    else if(Vy>1){
-      Vy = 1;                                                     // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+    else if(Vy>0.7){
+      Vy = 0.7;                                                     // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
     }
-    else if(Vy<-1){
-      Vy = -1;                                                    // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+    else if(Vy<-0.7){
+      Vy = -0.7;                                                    // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
     }
 
     /* 
@@ -245,7 +250,69 @@ void loop() {
     else{
       LCD_Sprite(int(x), int(y), 16, 24, J1, 5, 3, flip, 0);
     }
-    
+
+    //***********************************************************************************************************************************
+    // Colisiones
+    //***********************************************************************************************************************************
+    overlap_J1 = Check_overlap(106, 119, int(x), int(y), 107, 40, 24, 16);
+
+    if(overlap_J1 == 1){
+      region_obs1 = Regiones(int(x), int(y), 24, 16, 106, 119, 107, 40);
+
+      // Si se encuentra en la región superior al obstáculo
+      if(region_obs1 == 1){                                     
+        Vy = 0;
+        Ay = 0;                                                   // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
+        pintar_iz = 1;                                            // Pintar borde izquierdo en Sprite
+        pintar_der = 1;                                           // Pintar borde derecho en Sprite
+        pintar_arriba = 1;                                        // Pintar borde superior en Sprite
+        pintar_abajo = 0;                                         // Pintar borde inferior en Sprite
+      }
+
+      // Si se encuentra en la región central izquierda al obstáculo
+      else if(region_obs1 == 2){
+        Vx = -Vx;
+        pintar_iz = 1;                                            // Pintar borde izquierdo en Sprite
+        pintar_der = 0;                                           // Pintar borde derecho en Sprite
+        pintar_arriba = 1;                                        // Pintar borde superior en Sprite
+        pintar_abajo = 1;                                         // Pintar borde inferior en Sprite
+      }
+
+      // Si se encuentra en la región central derecha al obstáculo
+      else if(region_obs1 == 3){
+        Vx = -Vx;
+        Ax = -Ax;
+        pintar_iz = 0;                                            // Pintar borde izquierdo en Sprite
+        pintar_der = 1;                                           // Pintar borde derecho en Sprite
+        pintar_arriba = 1;                                        // Pintar borde superior en Sprite
+        pintar_abajo = 1;                                         // Pintar borde inferior en Sprite
+      }
+
+      // Si se encuentra en la región posterior al obstáculo
+      else if(region_obs1 == 4){
+        Vy = -Vy;
+        pintar_iz = 1;                                            // Pintar borde izquierdo en Sprite
+        pintar_der = 1;                                           // Pintar borde derecho en Sprite
+        pintar_arriba = 0;                                        // Pintar borde superior en Sprite
+        pintar_abajo = 1;                                         // Pintar borde inferior en Sprite
+      }
+
+      // Si se encuentra en una esquina
+      else{
+        Vx = -Vx;
+        Vy = -Vy;
+        Vx = -Vx;
+      }
+    }
+
+    // Si no existe overlap, continuar con físicas de caida libre normal
+    else{
+      pintar_iz = 1;                                              // Pintar borde izquierdo en Sprite
+      pintar_der = 1;                                             // Pintar borde derecho en Sprite
+      pintar_arriba = 1;                                          // Pintar borde superior en Sprite
+      pintar_abajo = 1;                                           // Pintar borde inferior en Sprite
+      Ay = Gravedad;
+    }
 
     //***********************************************************************************************************************************
     // Sprite J1
@@ -253,41 +320,32 @@ void loop() {
     /*
      * Para evitar que el jugador deje un rastro de pixeles se generó un cuadro negro alrededor del mismo y así cubrir todo el espacio con color negro.
      */
-    V_line(int(x)-1, int(y), 24, 0x0000);
-    V_line(int(x)-2, int(y), 24, 0x0000);
-    V_line(int(x)+17, int(y), 24, 0x0000);
-    V_line(int(x)+18, int(y), 24, 0x0000);
-    
-    H_line(int(x)-2, int(y)-1, 20, 0x0000);
-    H_line(int(x)-2, int(y)-2, 20, 0x0000);
-    H_line(int(x)-2, int(y)+25, 20, 0x0000);
-    H_line(int(x)-2, int(y)+26, 20, 0x0000);
-    
-    delay(5);
-
-    //***********************************************************************************************************************************
-    // Colisiones
-    //***********************************************************************************************************************************
-    overlap_J1 = Check_overlap(106, 119, int(x), int(y), 107, 80, 24, 16);
-    region_obs1 = Regiones(int(x), int(y), 24, 16, 106, 119, 107, 80);
-
-    if(overlap_J1 == 1){
-      if(region_obs1 == 1){
-        Vy = -Vy;
-      }
-      else if(region_obs1 == 2){
-        Vx = -Vx;
-      }
-      else if(region_obs1 == 3){
-        Vy = -Vy;
-      }
-      else{
-        Vy = -Vy;
-        Vx = -Vx;
-      }
+    if(pintar_iz == 1){
+      V_line(int(x)-1, int(y), 24, 0x0000);
+      V_line(int(x)-2, int(y), 24, 0x0000);
     }
-    else{
-      Serial.println("No hay overlap :)");
+    else if(pintar_iz == 0){
+    }
+    
+    if(pintar_der == 1){
+      V_line(int(x)+17, int(y), 24, 0x0000);
+      V_line(int(x)+18, int(y), 24, 0x0000);
+    }
+    else if(pintar_der == 0){
+    }
+    
+    if(pintar_arriba == 1){
+      H_line(int(x)-2, int(y)-1, 20, 0x0000);
+      H_line(int(x)-2, int(y)-2, 20, 0x0000);
+    }
+    else if(pintar_arriba == 0){
+    }
+    
+    if(pintar_abajo == 1){
+      H_line(int(x)-2, int(y)+25, 20, 0x0000);
+      H_line(int(x)-2, int(y)+26, 20, 0x0000);
+    }
+    else if(pintar_abajo == 0){
     }
   }
 
@@ -324,21 +382,24 @@ int Check_overlap(int posx_poligono, int posy_poligono, int posx_jugador, int po
 }
 
 //***************************************************************************************************************************************
-// Función para generar velocidad opuesta en una colisión
+// Función para generar regiones en las que el jugador se puede mover
 //***************************************************************************************************************************************
 /*
  * Se creo una subrutina espcífica para generar 4 regiones en cada uno de los lados del obstáculo indicado. Esto nos permite saber de qué lado se encuentra el personaje y así descifrar en que lado
  * colisionará y como deberá reaccionar a esto.
  */
 int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obstaculo, int posy_obstaculo, int ancho_obstaculo, int alto_obstaculo){
-  if(posx_J1 >= posx_obstaculo && posx_J1 <= (posx_obstaculo + ancho_obstaculo) && posy_J1 <= (posy_obstaculo + (0.5)*(alto_obstaculo))){
+  if(posx_J1 >= posx_obstaculo && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo) && posy_J1 <= posy_obstaculo){
     return 1;                                                     // Pestaña superior al obstáculo
   }
-  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo) && posy_J1 >= posy_obstaculo){
-    return 2;                                                     // Pestaña central al obstáculo
+  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo) && (posy_J1 + alto_J1) >= posy_obstaculo && posx_J1 <= posx_obstaculo){
+    return 2;                                                     // Pestaña central izquierda al obstáculo
   }
-  else if((posx_J1 + ancho_J1) >= posx_obstaculo && posx_J1 <= (posx_obstaculo + ancho_obstaculo) && posy_J1 >= (posy_obstaculo + alto_obstaculo)){
-    return 3;                                                     // Pestaña posterior al obstáculo
+  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo) && (posy_J1 + alto_J1) >= posy_obstaculo && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo)){
+    return 3;                                                     // Pestaña central derecha al obstáculo
+  }
+  else if(posx_J1 >= posx_obstaculo && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo)){
+    return 4;                                                     // Pestaña posterior al obstáculo
   }
   else{
     return 4;                                                     // Esquinas del obstáculo (sin importancia)
