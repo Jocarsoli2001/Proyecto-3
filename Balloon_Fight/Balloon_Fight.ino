@@ -273,24 +273,21 @@ void loop() {
 
     if(overlap_J1 == 1){
       if(region_obs1 == 1){
-        Vy = 0;
-        Ay = 0;
-      }
-      else if(region_obs1 != 1){
-        Ay = 0.007;
+        Vy = -Vy;
       }
       else if(region_obs1 == 2){
         Vx = -Vx;
       }
       else if(region_obs1 == 3){
-        Vx = -Vx;
-      }
-      else if(region_obs1 == 3){
         Vy = -Vy;
+      }
+      else{
+        Vy = -Vy;
+        Vx = -Vx;
       }
     }
     else{
-      Ay = 0.007;
+      Serial.println("No hay overlap :)");
     }
   }
 
@@ -337,17 +334,14 @@ int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obsta
   if(posx_J1 >= posx_obstaculo && posx_J1 <= (posx_obstaculo + ancho_obstaculo) && posy_J1 <= (posy_obstaculo + (0.5)*(alto_obstaculo))){
     return 1;                                                     // Pestaña superior al obstáculo
   }
-  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo) && posy_J1 >= posy_obstaculo && (posx_J1 + ancho_J1) < (posx_obstaculo + (0.5)*(ancho_obstaculo))){
-    return 2;                                                     // Pestaña central izquierda al obstáculo
+  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo) && posy_J1 >= posy_obstaculo){
+    return 2;                                                     // Pestaña central al obstáculo
   }
-  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo) && posy_J1 >= posy_obstaculo && posx_J1 > (posx_obstaculo + (0.5)*(ancho_obstaculo))){
-    return 3;                                                     // Pestaña central derecha al obstáculo
-  }
-  else if(posx_J1 >= posx_obstaculo && posx_J1 <= (posx_obstaculo + ancho_obstaculo) && posy_J1 >= (posy_obstaculo + (0.5)*(alto_obstaculo))){
-    return 4;                                                     // Pestaña posterior al obstáculo
+  else if((posx_J1 + ancho_J1) >= posx_obstaculo && posx_J1 <= (posx_obstaculo + ancho_obstaculo) && posy_J1 >= (posy_obstaculo + alto_obstaculo)){
+    return 3;                                                     // Pestaña posterior al obstáculo
   }
   else{
-    return 5;                                                     // Esquinas del obstáculo (sin importancia)
+    return 4;                                                     // Esquinas del obstáculo (sin importancia)
   }
 }
 
