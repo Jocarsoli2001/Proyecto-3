@@ -51,7 +51,10 @@ int DE_J1 = 0;
 int flip = 0;
 int volando = 0;
 int Game_Over = 0;
-
+int overlap_J1 = 0;
+int region_obs1 = 0;
+int vector_x1 = 0;
+int vector_y1 = 0;
 
 
 //***************************************************************************************************************************************
@@ -67,11 +70,11 @@ void V_line(unsigned int x, unsigned int y, unsigned int l, unsigned int c);
 void Rect(unsigned int x, unsigned int y, unsigned int w, unsigned int h, unsigned int c);
 void FillRect(unsigned int x, unsigned int y, unsigned int w, unsigned int h, unsigned int c);
 void LCD_Print(String text, int x, int y, int fontSize, int color, int background);
-
 void LCD_Bitmap(unsigned int x, unsigned int y, unsigned int width, unsigned int height, unsigned char bitmap[]);
 void LCD_Sprite(int x, int y, int width, int height, unsigned char bitmap[], int columns, int index, char flip, char offset);
+int Check_overlap(int posx_poligono, int posy_poligono, int posx_jugador, int posy_jugador, int ancho_poligono, int alto_poligono, int alto_jugador, int ancho_jugador);
+int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obstaculo, int posy_obstaculo, int ancho_obstaculo, int alto_obstaculo);
 
-extern uint8_t fondo[];
 //***************************************************************************************************************************************
 // Inicialización
 //***************************************************************************************************************************************
@@ -88,34 +91,11 @@ void setup() {
   pinMode(Jugador_1, INPUT);
   pinMode(Izquierda_J1, INPUT);
   pinMode(Derecha_J1, INPUT);                             
-//  FillRect(0, 0, 319, 239, 0xFFFF);
-//    FillRect(50, 60, 20, 20, 0xF800);
-//    FillRect(70, 60, 20, 20, 0x07E0);
-//    FillRect(90, 60, 20, 20, 0x001F);
+
 
   FillRect(0, 0, 319, 239, 0x0000);
-  //String text1 = "Hola Mundo";
-  //LCD_Print(text1, 20, 100, 2, 0x001F, 0xCAB9);
+  FillRect(106, 119, 107, 80, 0x2703);
 
-
-  //LCD_Bitmap(60, 100, 32, 32, prueba);
-  //LCD_Print(text1, 20, 100, 2, 0xffff, 0x421b);
-  //LCD_Sprite(int x, int y, int width, int height, unsigned char bitmap[],int columns, int index, char flip, char offset);
-  //LCD_Sprite(60,100,32,32,pesaSprite,4,3,0,1);
-
-  
-  
-  //LCD_Bitmap(unsigned int x, unsigned int y, unsigned int width, unsigned int height, unsigned char bitmap[]);
-//  LCD_Bitmap(0, 0, 320, 240, fondo);
-
-//  for(int x = 0; x <319; x++){
-//    LCD_Bitmap(x, 116, 16, 16, tile);
-////    LCD_Bitmap(x, 68, 16, 16, tile);
-////
-//    LCD_Bitmap(x, 207, 16, 16, tile);
-//    LCD_Bitmap(x, 223, 16, 16, tile);
-//    x += 15;
-//    }
 
 }
 //***************************************************************************************************************************************
@@ -133,22 +113,26 @@ void loop() {
   // Variables jugador (eje y)
   //***********************************************************************************************************************************
   float y = 100;
+  float yf = 0;
   float Vy = 0;
-  float Vy_prev = 0;
-  float Delta_V = 0;
+  float y_prev = 0;
   float Ay = 0.007;
   
   //***********************************************************************************************************************************
   // Variables jugador (eje x)
   //***********************************************************************************************************************************
   float x = 50;
+  float xf = 0;
   float Vx = 0;
+  float x_prev = 0;
   float Ax = 0;
 
   while(Game_Over == 0) {
     //***********************************************************************************************************************************
-    // For Loop para prevenir error en pared
+    // Guardar posición anterior
     //***********************************************************************************************************************************
+    x_prev = x;
+    y_prev = y;
     
     //***********************************************************************************************************************************
     // Implementación de física (eje x)
@@ -195,6 +179,12 @@ void loop() {
     else{
       x += Vx*(t) + (0.5)*Ax*(t*t);
     }
+
+    /*
+     * Para implementar un chequeo de la posición futura que el sprite tendrá, será necesaria la fórmula de física: xf = xo + vot + (1/2)*A*t*t
+     */
+    xf = x + Vx*(t) + (0.5)*Ax*(t*t);
+    
     
     //***********************************************************************************************************************************
     // Implementación de física (eje y)
@@ -236,6 +226,11 @@ void loop() {
       y += Vy*(t) + (0.5)*Ay*(t*t);                               // Si el jugador se encuentra entre 0 y 240 en el eje y, la posición vertical está dada por esta fórmula
     }
 
+    /*
+     * Para implementar un chequeo de la posición futura que el sprite tendrá, será necesaria la fórmula de física: yf = yo + vot + (1/2)*A*t*t
+     */
+    yf = y + Vy*(t) + (0.5)*Ay*(t*t);
+
     //***********************************************************************************************************************************
     // Comparación de velocidad
     //***********************************************************************************************************************************
@@ -256,8 +251,8 @@ void loop() {
     // Sprite J1
     //***********************************************************************************************************************************
     /*
-       * Para evitar que el jugador deje un rastro de pixeles se generó un cuadro negro alrededor del mismo y así cubrir todo el espacio con color negro.
-    */
+     * Para evitar que el jugador deje un rastro de pixeles se generó un cuadro negro alrededor del mismo y así cubrir todo el espacio con color negro.
+     */
     V_line(int(x)-1, int(y), 24, 0x0000);
     V_line(int(x)-2, int(y), 24, 0x0000);
     V_line(int(x)+17, int(y), 24, 0x0000);
@@ -270,9 +265,92 @@ void loop() {
     
     delay(5);
 
+    //***********************************************************************************************************************************
+    // Colisiones
+    //***********************************************************************************************************************************
+    overlap_J1 = Check_overlap(106, 119, int(x), int(y), 107, 80, 24, 16);
+    region_obs1 = Regiones(int(x), int(y), 24, 16, 106, 119, 107, 80);
+
+    if(overlap_J1 == 1){
+      if(region_obs1 == 1){
+        Vy = 0;
+        Ay = 0;
+      }
+      else if(region_obs1 != 1){
+        Ay = 0.007;
+      }
+      else if(region_obs1 == 2){
+        Vx = -Vx;
+      }
+      else if(region_obs1 == 3){
+        Vx = -Vx;
+      }
+      else if(region_obs1 == 3){
+        Vy = -Vy;
+      }
+    }
+    else{
+      Ay = 0.007;
+    }
   }
 
 }
+//***************************************************************************************************************************************
+// Función para chequeo de overlap entre 1 superficie y el jugador
+//***************************************************************************************************************************************
+/*
+ * Para esta función se busca encontrar si los obstáculos y el personaje se colocan uno sobre otro o si se da un "overlap". Se calcula a partir de indicar cuales son los 4 lados de los dos objetos  
+ * para los cuales se desea encontrar su overlap. Lo bueno es que si este no detecta overlap en alguno de los dos ejes, el area siempre nos va a dar 0.
+ */
+int Check_overlap(int posx_poligono, int posy_poligono, int posx_jugador, int posy_jugador, int ancho_poligono, int alto_poligono, int alto_jugador, int ancho_jugador){
+  int der_poligono = posx_poligono + ancho_poligono;              // Calcular lado derecho del poligono a utilizar
+  int iz_poligono = posx_poligono;                                // Calcular lado izquierdo del poligono a utilizar
+  int abajo_poligono = posy_poligono + alto_poligono;             // Calcular lado posterior del poligono a utilizar
+  int arriba_poligono = posy_poligono;                            // Calcular lado superior del poligono a utilizar
+
+  int der_jugador = posx_jugador + ancho_jugador;                 // Calcular lado derecho del sprite a utilizar
+  int iz_jugador = posx_jugador;                                  // Calcular lado izquierdo del sprite a utilizar
+  int abajo_jugador = posy_jugador + alto_jugador;                // Calcular lado posterior del sprite a utilizar
+  int arriba_jugador = posy_jugador;                              // Calcular lado superior del sprite a utilizar
+  
+  int overlap_x = max(0, (min(der_poligono, der_jugador) - max(iz_poligono, iz_jugador)));                      // Cálculo del overlap en eje x
+  int overlap_y = max(0, (min(abajo_poligono, abajo_jugador) - max(arriba_poligono, arriba_jugador)));          // Cálculo del overlap en eje y
+
+  int area_overlap = overlap_x * overlap_y;                       // Cálculo del área total de overlap entre ambas figuras
+
+  if(area_overlap > 0){                                           // Retornar 1 si existe un overlap y un 0 si no hay
+    return 1;
+  }
+  else{
+    return 0; 
+  }
+}
+
+//***************************************************************************************************************************************
+// Función para generar velocidad opuesta en una colisión
+//***************************************************************************************************************************************
+/*
+ * Se creo una subrutina espcífica para generar 4 regiones en cada uno de los lados del obstáculo indicado. Esto nos permite saber de qué lado se encuentra el personaje y así descifrar en que lado
+ * colisionará y como deberá reaccionar a esto.
+ */
+int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obstaculo, int posy_obstaculo, int ancho_obstaculo, int alto_obstaculo){
+  if(posx_J1 >= posx_obstaculo && posx_J1 <= (posx_obstaculo + ancho_obstaculo) && posy_J1 <= (posy_obstaculo + (0.5)*(alto_obstaculo))){
+    return 1;                                                     // Pestaña superior al obstáculo
+  }
+  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo) && posy_J1 >= posy_obstaculo && (posx_J1 + ancho_J1) < (posx_obstaculo + (0.5)*(ancho_obstaculo))){
+    return 2;                                                     // Pestaña central izquierda al obstáculo
+  }
+  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo) && posy_J1 >= posy_obstaculo && posx_J1 > (posx_obstaculo + (0.5)*(ancho_obstaculo))){
+    return 3;                                                     // Pestaña central derecha al obstáculo
+  }
+  else if(posx_J1 >= posx_obstaculo && posx_J1 <= (posx_obstaculo + ancho_obstaculo) && posy_J1 >= (posy_obstaculo + (0.5)*(alto_obstaculo))){
+    return 4;                                                     // Pestaña posterior al obstáculo
+  }
+  else{
+    return 5;                                                     // Esquinas del obstáculo (sin importancia)
+  }
+}
+
 //***************************************************************************************************************************************
 // Función para inicializar LCD
 //***************************************************************************************************************************************
