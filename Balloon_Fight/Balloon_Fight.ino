@@ -191,7 +191,7 @@ void loop() {
     if(IZ_J1 == LOW && DE_J1 == LOW){ 
       Ax = 0;
       if(parado == 1){
-        Vx = (0.99)*Vx;
+        Vx = (0.9)*Vx;
       }
       else{
         Vx = (0.999)*Vx;
