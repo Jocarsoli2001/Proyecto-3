@@ -145,16 +145,13 @@ void loop() {
     if(IZ_J1 == HIGH)                                             // En el eje x, cuando se presiona el botón para mover a la izquierda, se agrega una velocidad en el eje x-, por lo va a la izquierda
     {
       Vx -= 0.003;                                                 
-      Ax = -0.0007;                                               // Se genera una aceleración para un giro más suave
+      Ax = -0.0007;                                                // Se genera una aceleración para un giro más suave
       flip = 0;                                                   // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
     if(DE_J1 == HIGH){                                            // En el eje x, cuando se presiona el botón para mover a la derecha, se agrega una velocidad en el eje x+, por lo va a la derecha
       Vx += 0.003;
-      Ax = 0.0007;                                                // Se genera una aceleración para un giro más suave
+      Ax = 0.0007;                                                 // Se genera una aceleración para un giro más suave
       flip = 1;                                                   // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
-    }
-    else if (IZ_J1 == LOW && DE_J1 == LOW){                       // Si no se detecta algun cambio en ninguno de los dos botones de movimiento horizontal, apagar la aceleración. 
-      Ax = 0;
     }
 
     if(Vx<=0.2 && Vx>=-0.2){                                      // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
@@ -186,7 +183,15 @@ void loop() {
      * Para implementar un chequeo de la posición futura que el sprite tendrá, será necesaria la fórmula de física: xf = xo + vot + (1/2)*A*t*t
      */
     xf = x + Vx*(t) + (0.5)*Ax*(t*t);
-    
+
+    /*
+     * Si no se detecta cambios en los botones de movimiento, se suma una aceleración en dirección contraria a la que se lleva, para generar una desaceleración
+     * y así llegar al punto de reposo en el aire
+     */
+    if(IZ_J1 == LOW && DE_J1 == LOW){ 
+      Ax = 0;
+      Vx = (0.999)*Vx;
+    }
     
     //***********************************************************************************************************************************
     // Implementación de física (eje y)
@@ -267,6 +272,8 @@ void loop() {
         // Alteración a velocidades y aceleración                                   
         Vy = 0;
         Ay = 0;                                                   // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
+        parado = 1;
+        Serial.println(1);
       }
 
       // Si se encuentra en la región central izquierda al obstáculo
@@ -279,6 +286,7 @@ void loop() {
 
         // Alteración de la velocidad en x
         Vx = -Vx;
+        Serial.println(2);
       }
 
       // Si se encuentra en la región central derecha al obstáculo
@@ -292,6 +300,7 @@ void loop() {
         // Alteración de la velocidad en x y la aceleración en x
         Vx = -Vx;
         Ax = -Ax;
+        Serial.println(3);
       }
 
       // Si se encuentra en la región posterior al obstáculo
@@ -304,17 +313,30 @@ void loop() {
 
         // Alteración de la velocidad en y
         Vy = -Vy;
+        Serial.println(4);
       }
 
       // Si se encuentra en una esquina
-      else{
+      else if (region_obs1 == 5){
         
-        // Alterar tanto la velocidad en x y en "y"
-        Vx = -Vx;
+        // Alterar la velocidad  "y"
         Vy = -Vy;
         parado = 0;
+        Serial.println(5);
       }
 
+      else if(region_obs1 == 6){
+        Vx = -Vx;
+        Serial.println(6);
+      }
+      else if(region_obs1 == 7){
+        Vy = -Vy;
+        Serial.println(7);
+      }
+      else if(region_obs1 == 8){
+        Vx = -Vx;
+        Serial.println(8);
+      }
       
     }
 
@@ -373,20 +395,45 @@ int Check_overlap(int posx_poligono, int posy_poligono, int posx_jugador, int po
  * colisionará y como deberá reaccionar a esto.
  */
 int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obstaculo, int posy_obstaculo, int ancho_obstaculo, int alto_obstaculo){
+
+  // Pestaña superior al obstáculo
   if(posx_J1 >= (posx_obstaculo - (0.5)*ancho_J1) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && posy_J1 <= (posy_obstaculo)){
-    return 1;                                                     // Pestaña superior al obstáculo
+    return 1;                                                  
   }
+
+  // Pestaña central izquierda al obstáculo
   else if(posy_J1 <= (posy_obstaculo + alto_obstaculo + (0.5)*alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo - (0.5)*alto_J1) && posx_J1 <= posx_obstaculo){
-    return 2;                                                     // Pestaña central izquierda al obstáculo
+    return 2;                                                    
   }
+
+  // Pestaña central derecha al obstáculo
   else if(posy_J1 <= (posy_obstaculo + alto_obstaculo + (0.5)*alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo - (0.5)*alto_J1) && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo)){
-    return 3;                                                     // Pestaña central derecha al obstáculo
+    return 3;                                                    
   }
-  else if(posx_J1 >= (posx_obstaculo - (0.5)*ancho_J1) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo)){
-    return 4;                                                     // Pestaña posterior al obstáculo
+
+  // Pestaña posterior al obstáculo
+  else if(posx_J1 >= (posx_obstaculo - (0.5)*ancho_J1) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo )){
+    return 4;                                                    
   }
-  else{
-    return 5;                                                     // Esquinas del obstáculo (sin importancia)
+
+  // Esquina superior izquierda del obstáculo
+  else if(posx_J1 < (posx_obstaculo - (0.5)*ancho_J1) && posy_J1 < (posy_obstaculo - (0.5)*alto_J1)){
+    return 5;                                                     
+  }
+
+  // Esquina superior derecha del obstáculo
+  else if((posx_J1 + ancho_J1) > (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && posy_J1 < (posy_obstaculo - (0.5)*alto_J1)){
+    return 6;
+  }
+
+  // Esquina inferior izquierda del obstáculo
+  else if(posx_J1 < (posx_obstaculo - (0.5)*ancho_J1) && (posy_J1 + alto_J1) > (posy_obstaculo + alto_obstaculo + (0.5)*alto_J1)){
+    return 7;                                                      
+  }
+
+  // Esquina inferior derecha del obstáculo
+  else if((posx_J1 + ancho_J1) > (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && posy_J1 > (posy_obstaculo + alto_obstaculo + (0.5)*alto_J1)){
+    return 8;
   }
 }
 
