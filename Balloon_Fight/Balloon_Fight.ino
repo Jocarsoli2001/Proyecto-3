@@ -40,10 +40,38 @@
 #define Izquierda_J1 PA_7
 #define Derecha_J1 PC_7
 #define Gravedad 0.001
-#define Coordenada_x_obs1 60
-#define Coordenada_y_obs1 70
-#define Ancho_obs1 100
-#define Alto_obs1 20
+
+
+//***************************************************************************************************************************************
+// Structs
+//***************************************************************************************************************************************
+typedef struct{
+  float Vx;
+  float Vy;
+  float Ax;
+  float Ay;
+}
+vel_acel;
+
+typedef struct{
+  float Px;
+  float Py;
+  float Ancho;
+  float Alto;
+  float Vx;
+  float Vy;
+  float Ax;
+  float Ay;
+}
+Jugador;
+
+typedef struct{
+  float Px;
+  float Py;
+  float Ancho;
+  float Alto;
+}
+Obstaculo;
 
 //***************************************************************************************************************************************
 // Variables
@@ -73,6 +101,7 @@ int vector_y1 = 0;
   int pintar_abajo = 0;
   int parado = 0;
   int refresh = 0;
+  vel_acel VA;
   
   //***********************************************************************************************************************************
   // Variables jugador (eje y)
@@ -92,6 +121,8 @@ int vector_y1 = 0;
   float x_prev = 0;
   float Ax = 0;
 
+  Obstaculo obs1 = {60, 70, 100, 20};
+
 
 //***************************************************************************************************************************************
 // Functions Prototypes
@@ -110,7 +141,7 @@ void LCD_Bitmap(unsigned int x, unsigned int y, unsigned int width, unsigned int
 void LCD_Sprite(int x, int y, int width, int height, unsigned char bitmap[], int columns, int index, char flip, char offset);
 int Check_overlap(int posx_poligono, int posy_poligono, int posx_jugador, int posy_jugador, int ancho_poligono, int alto_poligono, int alto_jugador, int ancho_jugador);
 int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obstaculo, int posy_obstaculo, int ancho_obstaculo, int alto_obstaculo);
-void Colisiones(int variable_region, int const_gravedad, int const_parado, int posx_J, int posy_J, int ancho_J, int alto_J, int posx_obstaculo, int posy_obstaculo, int ancho_obstaculo, int alto_obstaculo, int overlap, float V_ejex, float V_ejey, float A_ejey, float A_ejex);
+vel_acel Colisiones(int posx_J, int posy_J, int ancho_J, int alto_J, Obstaculo obs, float V_ejex, float V_ejey, float A_ejey, float A_ejex);
 
 //***************************************************************************************************************************************
 // Inicialización
@@ -131,7 +162,7 @@ void setup() {
 
 
   FillRect(0, 0, 319, 239, 0x0000);
-  FillRect(Coordenada_x_obs1 + 4, Coordenada_y_obs1 + 4, Ancho_obs1 - 6, Alto_obs1 - 6, 0x2703);
+  FillRect(obs1.Px + 4, obs1.Py + 4, obs1.Ancho - 6, obs1.Alto - 6, 0x2703);
 
 
 }
@@ -264,90 +295,98 @@ void loop() {
     }
 
     //***********************************************************************************************************************************
-    // Colisiones
+    // Colisiones Primer obstáculo
     //***********************************************************************************************************************************
-    overlap_J1 = Check_overlap(Coordenada_x_obs1, Coordenada_y_obs1, int(x), int(y), Ancho_obs1, Alto_obs1, 24, 16);
-    Colisiones(region_obs1, Gravedad, parado, int(x), int(y), 16, 24, Coordenada_x_obs1, Coordenada_y_obs1, Ancho_obs1, Alto_obs1, overlap_J1, Vx, Vy, Ay, Ax);
-    
-    
+    VA = Colisiones(int(x), int(y), 16, 24, obs1, Vx, Vy, Ay, Ax);
+    Vx = VA.Vx;
+    Vy = VA.Vy;
+    Ax = VA.Ax;
+    Ay = VA.Ay;
   }
 
 }
 //***************************************************************************************************************************************
 // Función para chequeo de overlap entre 1 superficie y el jugador
 //***************************************************************************************************************************************
-void Colisiones(int variable_region, int const_gravedad, int const_parado, int posx_J, int posy_J, int ancho_J, int alto_J, int posx_obstaculo, int posy_obstaculo, int ancho_obstaculo, int alto_obstaculo, int overlap, float V_ejex, float V_ejey, float A_ejey, float A_ejex){
-  if(overlap == 1){
-      variable_region = Regiones(posx_J, posy_J, alto_J, ancho_J, posx_obstaculo, posy_obstaculo, ancho_obstaculo, alto_obstaculo);
-      
+vel_acel Colisiones(int posx_J, int posy_J, int ancho_J, int alto_J, Obstaculo obs, float V_ejex, float V_ejey, float A_ejey, float A_ejex){
+
+  // Se chequea el overlap entre el jugador indicado y el obstáculo indicado
+  int overlap = Check_overlap(obs.Px, obs.Py, posx_J, posy_J, obs.Ancho, obs.Alto, alto_J, ancho_J);
+
+  // Si existe overlap
+  if(overlap == 1){ 
+
+      // Chequeo de que region es en la que se encuentra
+      int variable_region = Regiones(posx_J, posy_J, alto_J, ancho_J, obs.Px, obs.Py, obs.Ancho, obs.Alto);
+       
       // Si se encuentra en la región superior al obstáculo
       if(variable_region == 1){ 
-        
+            
         // Pintar borde superior, izquierdo y derecho.
         H_line(posx_J -2, posy_J -1, 20, 0x0000); 
         V_line(posx_J +17, posy_J, 24, 0x0000);
         V_line(posx_J +18, posy_J, 24, 0x0000);
         V_line(posx_J -1, posy_J, 24, 0x0000);
         V_line(posx_J -2, posy_J, 24, 0x0000);
-
+    
         // Alteración a velocidades y aceleración                                   
         V_ejey = 0;
         A_ejey = 0;                                                   // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
-        const_parado = 1;
+        parado = 1;
       }
-
+    
       // Si se encuentra en la región central izquierda al obstáculo
       else if(variable_region == 2){
-
+    
         // Pintar borde superior, izquierdo y posterior.
         V_line(posx_J -1, posy_J, 24, 0x0000);
         H_line(posx_J -2, posy_J -1, 20, 0x0000);
         H_line(posx_J -2, posy_J +25, 20, 0x0000);
-
+      
         // Alteración de la velocidad en x
-        V_ejex = -V_ejex;
+        V_ejex = ((-1)*(V_ejex));
       }
-
+    
       // Si se encuentra en la región central derecha al obstáculo
       else if(variable_region == 3){
-
+    
         // Pintar borde inferior, derecho y superior.
         V_line(posx_J +17, posy_J, 24, 0x0000);
         H_line(posx_J -2, posy_J -1, 20, 0x0000);
         H_line(posx_J -2, posy_J +25, 20, 0x0000);
-
+    
         // Alteración de la velocidad en x y la aceleración en x
-        V_ejex = -V_ejex;
-        A_ejex = -A_ejex;
+        V_ejex = ((-1)*(V_ejex));
+        A_ejex = ((-1)*(A_ejex));
       }
-
+    
       // Si se encuentra en la región posterior al obstáculo
       else if(variable_region == 4){
-
+    
         // Pintar borde inferior, izquierdo y derecho.
         V_line(posx_J +17, posy_J, 24, 0x0000);
         V_line(posx_J -1, posy_J, 24, 0x0000);
         H_line(posx_J -2, posy_J -1, 20, 0x0000);
-
+    
         // Alteración de la velocidad en y
-        V_ejey = -V_ejey;
+        V_ejey = ((-1)*(V_ejey));
       }
-
+    
       // Si se encuentra en una esquina
       else if (variable_region == 5){
         
         // Alterar la velocidad  "y"
-        V_ejey = -1.2*V_ejey;
-        V_ejex = -1.2*V_ejex;
+        V_ejey = ((-1)*(1.2)*(V_ejey));
+        V_ejex = ((-1)*(1.2)*(V_ejex));;
       }
-
+    
       /*
        * Para permitir que el jugador pueda caer libremente cuando se encuentra en una esquina, se chequea si está parado, de lo contrario, las esquinas repelen al jugador.
        */
       else {
-        if(const_parado == 0){
-          V_ejex = -V_ejex;
-          V_ejey = -V_ejey;
+        if(parado == 0){
+          V_ejex = ((-1)*(V_ejex));
+          V_ejey = ((-1)*(V_ejey));
         }
         else{
           V_line(posx_J +17, posy_J, 24, 0x0000);
@@ -356,24 +395,31 @@ void Colisiones(int variable_region, int const_gravedad, int const_parado, int p
           V_line(posx_J -1, posy_J, 24, 0x0000);
           V_line(posx_J -2, posy_J, 24, 0x0000);
           V_line(posx_J -3, posy_J, 24, 0x0000);
-        }
-      }
-      
-    }
+          }
+       }
+  }
+  // Si no existe overlap, continuar con físicas de caida libre normal
+  else{
 
-    // Si no existe overlap, continuar con físicas de caida libre normal
-    else{
+    // Pintar todos los bordes exteriores para no dejar rastro en la LCD
+    V_line(posx_J -1, posy_J, 24, 0x0000);
+    V_line(posx_J +17, posy_J, 24, 0x0000);
+    H_line(posx_J -2, posy_J -1, 20, 0x0000);
+    H_line(posx_J -2, posy_J +25, 20, 0x0000);
 
-      // Pintar todos los bordes exteriores para no dejar rastro en la LCD
-      V_line(posx_J -1, posy_J, 24, 0x0000);
-      V_line(posx_J +17, posy_J, 24, 0x0000);
-      H_line(posx_J -2, posy_J -1, 20, 0x0000);
-      H_line(posx_J -2, posy_J +25, 20, 0x0000);
+    // Dejar la gravedad constante y la variable de si está parado, en 0
+    A_ejey = Gravedad;
+    parado = 0;
+  }
+  
+  vel_acel VA;
 
-      // Dejar la gravedad constante y la variable de si está parado, en 0
-      A_ejey = const_gravedad;
-      const_parado = 0;
-    }
+  VA.Vx = V_ejex;
+  VA.Vy = V_ejey;
+  VA.Ax = A_ejex;
+  VA.Ay = A_ejey;
+
+  return(VA);
 }
 
 //***************************************************************************************************************************************
