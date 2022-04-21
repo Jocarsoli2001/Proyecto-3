@@ -272,7 +272,9 @@ void loop() {
         // Pintar borde superior, izquierdo y derecho.
         H_line(int(x)-2, int(y)-1, 20, 0x0000); 
         V_line(int(x)+17, int(y), 24, 0x0000);
+        V_line(int(x)+18, int(y), 24, 0x0000);
         V_line(int(x)-1, int(y), 24, 0x0000);
+        V_line(int(x)-2, int(y), 24, 0x0000);
 
         // Alteración a velocidades y aceleración                                   
         Vy = 0;
@@ -321,34 +323,27 @@ void loop() {
       else if (region_obs1 == 5){
         
         // Alterar la velocidad  "y"
-        Vy = -Vy;
-        parado = 0;
+        Vy = -1.2*Vy;
+        Vx = -1.2*Vx;
       }
 
-      else if(region_obs1 == 6){
-        Vx = -Vx;
-      }
-      else if(region_obs1 == 7){
-        Vy = -Vy;
-      }
-      else if(region_obs1 == 8){
-        Vx = -Vx;
-      }
+      /*
+       * Para permitir que el jugador pueda caer libremente cuando se encuentra en una esquina, se chequea si está parado, de lo contrario, las esquinas repelen al jugador.
+       */
       else {
-        Vx = -Vx;
-        Vy = -Vy;
+        if(parado == 0){
+          Vx = -Vx;
+          Vy = -Vy;
+        }
+        else{
+          V_line(int(x)+17, int(y), 24, 0x0000);
+          V_line(int(x)+18, int(y), 24, 0x0000);
+          V_line(int(x)+19, int(y), 24, 0x0000);
+          V_line(int(x)-1, int(y), 24, 0x0000);
+          V_line(int(x)-2, int(y), 24, 0x0000);
+          V_line(int(x)-3, int(y), 24, 0x0000);
+        }
       }
-
-      Serial.print("Region: ");
-      Serial.print(region_obs1);
-      Serial.print(" Ax: ");
-      Serial.print(Ax);
-      Serial.print(" Ay: ");
-      Serial.print(Ay);
-      Serial.print(" Vx: ");
-      Serial.print(Vx);
-      Serial.print(" Vy: ");
-      Serial.println(Vy);
       
     }
 
@@ -365,6 +360,7 @@ void loop() {
       Ay = Gravedad;
       parado = 0;
     }
+    
   }
 
 }
@@ -428,29 +424,13 @@ int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obsta
     return 4;                                                    
   }
 
-  // Pestaña: Superior izquierda
-  else if((posx_J1 + ancho_J1) <= (posx_obstaculo) && (posy_J1 + alto_J1) <= (posy_obstaculo)){
-    return 5;                                                     
-  }
-
-  // Pestaña: Superior derecha
-  else if((posx_J1) >= (posx_obstaculo + ancho_obstaculo) && (posy_J1 + alto_J1) <= (posy_obstaculo)){
-    return 6;
-  }
-
-  // Pestaña: Inferior Izquierda
-  else if((posx_J1 + ancho_J1) <= (posx_obstaculo) && (posy_J1) >= (posy_obstaculo + alto_obstaculo)){
-    return 7;                                                      
-  }
-
-  // Esquina inferior derecha del obstáculo
-  else if((posx_J1) >= (posx_obstaculo + ancho_obstaculo) && (posy_J1) >= (posy_obstaculo + alto_obstaculo)){
-    return 8;
-  }
+  else if((posx_J1 + 0.5*ancho_J1) > posx_obstaculo && (posx_J1 + 0.5*ancho_J1) < (posx_obstaculo + ancho_obstaculo) && (posy_J1 + 0.5*alto_J1) > posy_obstaculo && (posy_J1 + 0.5*alto_J1) < (posy_obstaculo + 0.5*alto_obstaculo)){
+    return 5;
+  } 
 
   // Caso no especificado
   else {
-    return 9;
+    return 6;
   }
 }
 
