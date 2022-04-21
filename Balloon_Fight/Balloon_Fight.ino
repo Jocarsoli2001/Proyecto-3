@@ -40,6 +40,10 @@
 #define Izquierda_J1 PA_7
 #define Derecha_J1 PC_7
 #define Gravedad 0.001
+#define Coordenada_x_obs1 60
+#define Coordenada_y_obs1 70
+#define Ancho_obs1 100
+#define Alto_obs1 20
 
 //***************************************************************************************************************************************
 // Variables
@@ -126,7 +130,7 @@ void setup() {
 
 
   FillRect(0, 0, 319, 239, 0x0000);
-  FillRect(106 + 4, 119 + 4, 107 - 6, 40 - 6, 0x2703);
+  FillRect(Coordenada_x_obs1 + 4, Coordenada_y_obs1 + 4, Ancho_obs1 - 6, Alto_obs1 - 6, 0x2703);
 
 
 }
@@ -261,10 +265,10 @@ void loop() {
     //***********************************************************************************************************************************
     // Colisiones
     //***********************************************************************************************************************************
-    overlap_J1 = Check_overlap(106, 119, int(x), int(y), 107, 40, 24, 16);
+    overlap_J1 = Check_overlap(Coordenada_x_obs1, Coordenada_y_obs1, int(x), int(y), Ancho_obs1, Alto_obs1, 24, 16);
 
     if(overlap_J1 == 1){
-      region_obs1 = Regiones(int(x), int(y), 24, 16, 106, 119, 107, 40);
+      region_obs1 = Regiones(int(x), int(y), 24, 16, Coordenada_x_obs1, Coordenada_y_obs1, Ancho_obs1, Alto_obs1);
       
       // Si se encuentra en la región superior al obstáculo
       if(region_obs1 == 1){ 
