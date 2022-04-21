@@ -278,7 +278,6 @@ void loop() {
         Vy = 0;
         Ay = 0;                                                   // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
         parado = 1;
-        Serial.println(1);
       }
 
       // Si se encuentra en la región central izquierda al obstáculo
@@ -291,7 +290,6 @@ void loop() {
 
         // Alteración de la velocidad en x
         Vx = -Vx;
-        Serial.println(2);
       }
 
       // Si se encuentra en la región central derecha al obstáculo
@@ -305,7 +303,6 @@ void loop() {
         // Alteración de la velocidad en x y la aceleración en x
         Vx = -Vx;
         Ax = -Ax;
-        Serial.println(3);
       }
 
       // Si se encuentra en la región posterior al obstáculo
@@ -318,7 +315,6 @@ void loop() {
 
         // Alteración de la velocidad en y
         Vy = -Vy;
-        Serial.println(4);
       }
 
       // Si se encuentra en una esquina
@@ -327,21 +323,32 @@ void loop() {
         // Alterar la velocidad  "y"
         Vy = -Vy;
         parado = 0;
-        Serial.println(5);
       }
 
       else if(region_obs1 == 6){
         Vx = -Vx;
-        Serial.println(6);
       }
       else if(region_obs1 == 7){
         Vy = -Vy;
-        Serial.println(7);
       }
       else if(region_obs1 == 8){
         Vx = -Vx;
-        Serial.println(8);
       }
+      else {
+        Vx = -Vx;
+        Vy = -Vy;
+      }
+
+      Serial.print("Region: ");
+      Serial.print(region_obs1);
+      Serial.print(" Ax: ");
+      Serial.print(Ax);
+      Serial.print(" Ay: ");
+      Serial.print(Ay);
+      Serial.print(" Vx: ");
+      Serial.print(Vx);
+      Serial.print(" Vy: ");
+      Serial.println(Vy);
       
     }
 
@@ -401,44 +408,49 @@ int Check_overlap(int posx_poligono, int posy_poligono, int posx_jugador, int po
  */
 int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obstaculo, int posy_obstaculo, int ancho_obstaculo, int alto_obstaculo){
 
-  // Pestaña superior al obstáculo
-  if(posx_J1 >= (posx_obstaculo - (0.5)*ancho_J1) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && posy_J1 <= (posy_obstaculo)){
+  // Pestaña: Arriba
+  if(posx_J1 >= (posx_obstaculo) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo) && (posy_J1 + (0.5)*alto_J1) <= (posy_obstaculo)){
     return 1;                                                  
   }
 
-  // Pestaña central izquierda al obstáculo
-  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo + (0.5)*alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo - (0.5)*alto_J1) && posx_J1 <= posx_obstaculo){
+  // Pestaña: Izquierda
+  else if((posy_J1 + alto_J1) <= (posy_obstaculo + alto_obstaculo) && (posy_J1) >= (posy_obstaculo) && (posx_J1) <= posx_obstaculo){
     return 2;                                                    
   }
 
-  // Pestaña central derecha al obstáculo
-  else if(posy_J1 <= (posy_obstaculo + alto_obstaculo + (0.5)*alto_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo - (0.5)*alto_J1) && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo)){
+  // Pestaña: Derecha
+  else if((posy_J1 + alto_J1) <= (posy_obstaculo + alto_obstaculo) && (posy_J1) >= (posy_obstaculo) && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo)){
     return 3;                                                    
   }
 
-  // Pestaña posterior al obstáculo
-  else if(posx_J1 >= (posx_obstaculo - (0.5)*ancho_J1) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo )){
+  // Pestaña: Abajo
+  else if(posx_J1 >= (posx_obstaculo) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo )){
     return 4;                                                    
   }
 
-  // Esquina superior izquierda del obstáculo
-  else if(posx_J1 < (posx_obstaculo - (0.5)*ancho_J1) && posy_J1 < (posy_obstaculo - (0.5)*alto_J1)){
+  // Pestaña: Superior izquierda
+  else if((posx_J1 + ancho_J1) <= (posx_obstaculo) && (posy_J1 + alto_J1) <= (posy_obstaculo)){
     return 5;                                                     
   }
 
-  // Esquina superior derecha del obstáculo
-  else if((posx_J1 + ancho_J1) > (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && posy_J1 < (posy_obstaculo - (0.5)*alto_J1)){
+  // Pestaña: Superior derecha
+  else if((posx_J1) >= (posx_obstaculo + ancho_obstaculo) && (posy_J1 + alto_J1) <= (posy_obstaculo)){
     return 6;
   }
 
-  // Esquina inferior izquierda del obstáculo
-  else if(posx_J1 < (posx_obstaculo - (0.5)*ancho_J1) && (posy_J1 + alto_J1) > (posy_obstaculo + alto_obstaculo + (0.5)*alto_J1)){
+  // Pestaña: Inferior Izquierda
+  else if((posx_J1 + ancho_J1) <= (posx_obstaculo) && (posy_J1) >= (posy_obstaculo + alto_obstaculo)){
     return 7;                                                      
   }
 
   // Esquina inferior derecha del obstáculo
-  else if((posx_J1 + ancho_J1) > (posx_obstaculo + ancho_obstaculo + (0.5)*ancho_J1) && posy_J1 > (posy_obstaculo + alto_obstaculo + (0.5)*alto_J1)){
+  else if((posx_J1) >= (posx_obstaculo + ancho_obstaculo) && (posy_J1) >= (posy_obstaculo + alto_obstaculo)){
     return 8;
+  }
+
+  // Caso no especificado
+  else {
+    return 9;
   }
 }
 
