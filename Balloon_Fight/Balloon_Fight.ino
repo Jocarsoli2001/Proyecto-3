@@ -30,7 +30,6 @@
 //***************************************************************************************************************************************
 // Definiciones de pines
 //***************************************************************************************************************************************
-
 #define LCD_RST PD_0
 #define LCD_CS PD_1
 #define LCD_RS PD_2
@@ -40,7 +39,6 @@
 #define Izquierda_J1 PA_7
 #define Derecha_J1 PC_7
 #define Gravedad 0.001
-
 
 //***************************************************************************************************************************************
 // Structs
@@ -62,6 +60,9 @@ typedef struct{
   float Vy;
   float Ax;
   float Ay;
+  int flip;
+  int parado;
+  int impulso;
 }
 Jugador;
 
@@ -77,52 +78,28 @@ Obstaculo;
 // Variables
 //***************************************************************************************************************************************
 int DPINS[] = {PB_0, PB_1, PB_2, PB_3, PB_4, PB_5, PB_6, PB_7};
-int Estado_J1 = 0;
-int presionado_J1 = 0;
-int IZ_J1 = 0;
-int DE_J1 = 0;
-int flip = 0;
-int volando = 0;
-int Game_Over = 0;
-int overlap_J1 = 0;
-int region_obs1 = 0;
-int vector_x1 = 0;
-int vector_y1 = 0;
+
 
   //***********************************************************************************************************************************
   // Variables comunes
   //***********************************************************************************************************************************
+  int Estado_J1 = 0;
+  int presionado_J1 = 0;
+  int IZ_J1 = 0;
+  int DE_J1 = 0;
+  int Game_Over = 0;
   float t = 1.5;
   int cont_anim1 = 0;
-  int flap = 0;
-  int pintar_iz = 0;
-  int pintar_der = 0;
-  int pintar_arriba = 0;
-  int pintar_abajo = 0;
-  int parado = 0;
-  int refresh = 0;
-  vel_acel VA;
   
-  //***********************************************************************************************************************************
-  // Variables jugador (eje y)
-  //***********************************************************************************************************************************
-  float y = 100;
-  float yf = 0;
-  float Vy = 0;
-  float y_prev = 0;
-  float Ay = Gravedad;
-  
-  //***********************************************************************************************************************************
-  // Variables jugador (eje x)
-  //***********************************************************************************************************************************
-  float x = 50;
-  float xf = 0;
-  float Vx = 0;
-  float x_prev = 0;
-  float Ax = 0;
 
-  Obstaculo obs1 = {60, 70, 100, 20};
-
+  //***********************************************************************************************************************************
+  // Declaración de objetos
+  //***********************************************************************************************************************************
+  Obstaculo obs1 = {60, 70, 100, 20};                             // Se crea un objeto tipo obstáculo que             
+  vel_acel VA;                                                    // Se crea una variable en la que se guardan los parámetros de retorno de subrutina "Colisiones"
+  Jugador J1 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0};     // Objeto tipo "Jugador" con todos los parámetros para el mismo
+  Jugador J_uno;                                                  // Variable para guardar parámetros para el jugador
+  Jugador J1_F;
 
 //***************************************************************************************************************************************
 // Functions Prototypes
@@ -141,7 +118,11 @@ void LCD_Bitmap(unsigned int x, unsigned int y, unsigned int width, unsigned int
 void LCD_Sprite(int x, int y, int width, int height, unsigned char bitmap[], int columns, int index, char flip, char offset);
 int Check_overlap(int posx_poligono, int posy_poligono, int posx_jugador, int posy_jugador, int ancho_poligono, int alto_poligono, int alto_jugador, int ancho_jugador);
 int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obstaculo, int posy_obstaculo, int ancho_obstaculo, int alto_obstaculo);
-vel_acel Colisiones(int posx_J, int posy_J, int ancho_J, int alto_J, Obstaculo obs, float V_ejex, float V_ejey, float A_ejey, float A_ejex);
+Jugador Colisiones(Jugador Jug, Obstaculo obs);
+Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der);
+Jugador Fisicas_y(Jugador Jug, int Boton_impulso);
+Jugador Fisicas(Jugador Jug, int Boton_impulso, int Boton_Iz, int Boton_Der);
+
 
 //***************************************************************************************************************************************
 // Inicialización
@@ -173,228 +154,282 @@ void loop() {
   
   while(Game_Over == 0) {
     //***********************************************************************************************************************************
-    // Implementación de física (eje x)
+    // Implementación de físicas (ambos ejes)
     //***********************************************************************************************************************************
     IZ_J1 = digitalRead(Izquierda_J1);
     DE_J1 = digitalRead(Derecha_J1);
-    
-    if(IZ_J1 == HIGH)                                             // En el eje x, cuando se presiona el botón para mover a la izquierda, se agrega una velocidad en el eje x-, por lo va a la izquierda
-    {
-      Vx -= 0.003;                                                 
-      Ax = -0.0007;                                                // Se genera una aceleración para un giro más suave
-      flip = 0;                                                   // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
-    }
-    if(DE_J1 == HIGH){                                            // En el eje x, cuando se presiona el botón para mover a la derecha, se agrega una velocidad en el eje x+, por lo va a la derecha
-      Vx += 0.003;
-      Ax = 0.0007;                                                 // Se genera una aceleración para un giro más suave
-      flip = 1;                                                   // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
-    }
-
-    if(Vx<=0.2 && Vx>=-0.2){                                      // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
-      Vx += Ax*(t);
-    }
-    else if(Vx>0.2){
-      Vx = 0.2;                                                   // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
-    }
-    else if(Vx<-0.2){
-      Vx = -0.2;                                                  // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
-    }
-
-    /* 
-     * Para lograr que el sprite aparezca hacia arriba cuando este atraviesa la pared de abajo, se hizo que se fuera a la coordenada "x = 0" cuando la misma se volviera mayor a 320 (límite de pantalla).
-     * Lo mismo sucede si supera la coordenada "x = 320", el sprite se mueve a la coordenada "x = 0".
-     */
-    if(x > 320){
-      x = 0;
-    }
-    else if(x < 0){
-      x = 320;
-      FillRect(0, 0, 19, 239, 0x0000);                            // Si el jugador sobrepasa la coordenada "x = 0", entonces hacer un rectángulo vertical para que no queden marcas del sprite.
-    }
-    else{
-      x += Vx*(t) + (0.5)*Ax*(t*t);
-    }
-
-    /*
-     * Para implementar un chequeo de la posición futura que el sprite tendrá, será necesaria la fórmula de física: xf = xo + vot + (1/2)*A*t*t
-     */
-    xf = x + Vx*(t) + (0.5)*Ax*(t*t);
-
-    /*
-     * Si no se detecta cambios en los botones de movimiento, se suma una aceleración en dirección contraria a la que se lleva, para generar una desaceleración
-     * y así llegar al punto de reposo en el aire
-     */
-    if(IZ_J1 == LOW && DE_J1 == LOW){ 
-      Ax = 0;
-      if(parado == 1){
-        Vx = (0.9)*Vx;
-      }
-      else{
-        Vx = (0.999)*Vx;
-      }
-    }
-    
-    //***********************************************************************************************************************************
-    // Implementación de física (eje y)
-    //***********************************************************************************************************************************
     Estado_J1 = digitalRead(Jugador_1);
     
-    if(Estado_J1 == HIGH)                                         // Observar si J1 está presionado
-    {
-      presionado_J1 = 1;                                          // Cambiar estado de variable J1
+    J1_F = Fisicas(J1, Estado_J1, IZ_J1, DE_J1);
+    J1 = J1_F;
+    
+    //***********************************************************************************************************************************
+    // Comparación de velocidad
+    //***********************************************************************************************************************************
+    /*
+     * Cuando el jugador presiona el botón para generar el impulso hacia arriba, la variable "presionado_J1" se vuelve 1 mientras el botón está presionado y hasta que no se suelta el botón, no se
+     * genera el impulso hacia arriba. Por esto mismo se utilizó esto para generar la animación del aleteo. Cuando esta variable se vuelve 1, la animación se ve alterada y al estar corriendo el juego,
+     * el personaje pareciera aletear para adquirir cierta altura.
+     */
+    if(J1.impulso == 1){
+      LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy, 5, 2, J1.flip, 0);      
     }
-    if (Estado_J1 == LOW && presionado_J1 == 1 )                  // Detectar cuando el botón J1 se soltó
+    else{
+      LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy, 5, 3, J1.flip, 0);
+    }
+
+    /*
+     * Cuando la variable "parado" es 1, se debe evaluar la dirección de la velocidad por su magnitud y así realizar la animación correspondiente.
+     */
+//    cont_anim1 += 1;
+//       
+//    if(parado == 1){
+//      if(J1.Vx == 0){
+//        int anim2 = (cont_anim1 / 15) % 4;
+//        LCD_Sprite(x,100,16,16,kirbys,4,anim2,0,0);
+//        V_line( x -1, 100, 16, 0x74DA);
+//      }
+//    }
+
+    //***********************************************************************************************************************************
+    // Colisiones Primer obstáculo
+    //***********************************************************************************************************************************
+    J_uno = Colisiones(J1, obs1);
+    J1 = J_uno;
+  }
+
+}
+
+//---------------------------------------------------- Subrutinas -----------------------------------------------------------------------
+//***************************************************************************************************************************************
+// Función que genera el conjunto de físicas para 1 solo jugador
+//***************************************************************************************************************************************
+Jugador Fisicas(Jugador Jug, int Boton_impulso, int Boton_Iz, int Boton_Der){
+  Jugador J_Fx;
+  Jugador J_Fy;
+
+  J_Fx = Fisicas_x(Jug, Boton_Iz, Boton_Der);
+  J_Fy = Fisicas_y(Jug, Boton_impulso);
+
+  Jugador J_FT;
+
+  J_FT.Vx = J_Fx.Vx;
+  J_FT.Ax = J_Fx.Ax;
+  J_FT.Px = J_Fx.Px;
+  J_FT.flip = J_Fx.flip;
+  J_FT.Vy = J_Fy.Vy;
+  J_FT.Ay = J_Fy.Ay;
+  J_FT.Py = J_Fy.Py;
+  J_FT.impulso = J_Fy.impulso;
+
+  return(J_FT);
+}
+
+//***************************************************************************************************************************************
+// Función para generar físicas en eje y
+//***************************************************************************************************************************************
+Jugador Fisicas_y(Jugador Jug, int Boton_impulso){
+  if(Boton_impulso == HIGH)                                       // Observar si el botón de impulso está presionado
     {
-      Vy -= 0.2;                                                  // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
-      presionado_J1 = 0;                                          // Cambiar variable presionado_J1 como antirebote
+      Jug.impulso = 1;                                            // Cambiar estado de variable Jug.impulso
+    }
+    if (Boton_impulso == LOW && Jug.impulso == 1 )                // Detectar cuando el botón de impulso se soltó
+    {
+      (Jug.Vy) -= 0.2;                                            // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
+      Jug.impulso = 0;                                            // Cambiar variable presionado_J1 como antirebote
     }
     
-    if(Vy<=0.5 && Vy>=-0.5){                                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
-      Vy += Ay*(t);
+    if((Jug.Vy)<=0.5 && (Jug.Vy)>=-0.5){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+      (Jug.Vy) += (Jug.Ay)*(t);
     }
-    else if(Vy>0.5){
-      Vy = 0.5;                                                     // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+    else if((Jug.Vy)>0.5){
+      (Jug.Vy) = 0.5;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
     }
-    else if(Vy<-0.5){
-      Vy = -0.5;                                                    // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+    else if((Jug.Vy)<-0.5){
+      (Jug.Vy) = -0.5;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
     }
 
     /* 
      * Para lograr que el sprite aparezca hacia arriba cuando este atraviesa la pared de abajo, se hizo que se fuera a la coordenada "y = 0" cuando la misma se volviera mayor a 240 (límite de pantalla).
      * Lo mismo sucede si supera la coordenada "y = 240", el sprite se mueve a la coordenada "y = 0".
      */
-    if(y > 240){                                        
-      y = 0;
+    if((J1.Py) > 240){                                        
+      (Jug.Py) = 0;
     }
-    else if(y < 0){
-      y = 240;
+    else if((Jug.Py) < 0){
+      (Jug.Py) = 240;
       FillRect(0, 0, 319, 28, 0x0000);                            // Si el jugador sobrepasa la coordenada "x = 0", entonces hacer un rectángulo vertical para que no queden marcas del sprite.
     }
     else{
-      y += Vy*(t) + (0.5)*Ay*(t*t);                               // Si el jugador se encuentra entre 0 y 240 en el eje y, la posición vertical está dada por esta fórmula
+      (Jug.Py) += (Jug.Vy)*(t) + (0.5)*(Jug.Ay)*(t*t);            // Si el jugador se encuentra entre 0 y 240 en el eje y, la posición vertical está dada por esta fórmula
+    }
+
+    Jugador J_Fy;
+
+    J_Fy.Py = Jug.Py;
+    J_Fy.Vy = Jug.Vy;
+    J_Fy.Ay = Jug.Ay;
+    J_Fy.impulso = Jug.impulso;
+  
+    return(J_Fy);
+}
+
+//***************************************************************************************************************************************
+// Función para generar físicas en eje x
+//***************************************************************************************************************************************
+Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
+  if(Boton_Iz == HIGH)                                            // En el eje x, cuando se presiona el botón para mover a la izquierda, se agrega una velocidad en el eje x-, por lo va a la izquierda
+    {
+      (Jug.Vx) -= 0.003;                                                 
+      (Jug.Ax) = -0.0007;                                         // Se genera una aceleración para un giro más suave
+      Jug.flip = 0;                                               // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
+    }
+    if(Boton_Der == HIGH){                                        // En el eje x, cuando se presiona el botón para mover a la derecha, se agrega una velocidad en el eje x+, por lo va a la derecha
+      (Jug.Vx) += 0.003;
+      (Jug.Ax) = 0.0007;                                          // Se genera una aceleración para un giro más suave
+      Jug.flip = 1;                                               // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
+    }
+
+    if((Jug.Vx)<=0.2 && (Jug.Vx)>=-0.2){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+      (Jug.Vx) += (Jug.Ax)*(t);
+    }
+    else if((Jug.Vx)>0.2){
+      (Jug.Vx) = 0.2;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+    }
+    else if(Jug.Vx<-0.2){
+      (Jug.Vx) = -0.2;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+    }
+
+    /* 
+     * Para lograr que el sprite aparezca hacia arriba cuando este atraviesa la pared de abajo, se hizo que se fuera a la coordenada "x = 0" cuando la misma se volviera mayor a 320 (límite de pantalla).
+     * Lo mismo sucede si supera la coordenada "x = 320", el sprite se mueve a la coordenada "x = 0".
+     */
+    if((Jug.Px) > 320){
+      (Jug.Px) = 0;
+    }
+    else if((Jug.Px) < 0){
+      (Jug.Px) = 320;
+      FillRect(0, 0, 19, 239, 0x0000);                            // Si el jugador sobrepasa la coordenada "x = 0", entonces hacer un rectángulo vertical para que no queden marcas del sprite.
+    }
+    else{
+      (Jug.Px) += (Jug.Vx)*(t) + (0.5)*(Jug.Ax)*(t*t);
     }
 
     /*
-     * Para implementar un chequeo de la posición futura que el sprite tendrá, será necesaria la fórmula de física: yf = yo + vot + (1/2)*A*t*t
+     * Si no se detecta cambios en los botones de movimiento, se suma una aceleración en dirección contraria a la que se lleva, para generar una desaceleración
+     * y así llegar al punto de reposo en el aire
      */
-    yf = y + Vy*(t) + (0.5)*Ay*(t*t);
-
-    //***********************************************************************************************************************************
-    // Comparación de velocidad
-    //***********************************************************************************************************************************
-    if(presionado_J1 == 1){
-      /*
-       * Cuando el jugador presiona el botón para generar el impulso hacia arriba, la variable "presionado_J1" se vuelve 1 mientras el botón está presionado y hasta que no se suelta el botón, no se
-       * genera el impulso hacia arriba. Por esto mismo se utilizó esto para generar la animación del aleteo. Cuando esta variable se vuelve 1, la animación se ve alterada y al estar corriendo el juego,
-       * el personaje pareciera aletear para adquirir cierta altura.
-       */
-      LCD_Sprite(int(x), int(y), 16, 24, J1, 5, 2, flip, 0);      
-    }
-    else{
-      LCD_Sprite(int(x), int(y), 16, 24, J1, 5, 3, flip, 0);
+    if(Boton_Iz == LOW && Boton_Der == LOW){ 
+      (Jug.Ax) = 0;
+      if(Jug.parado == 1){
+        (Jug.Vx) = (0.9)*(Jug.Vx);
+      }
+      else{
+        (Jug.Vx) = (0.995)*(Jug.Vx);
+      }
     }
 
-    //***********************************************************************************************************************************
-    // Colisiones Primer obstáculo
-    //***********************************************************************************************************************************
-    VA = Colisiones(int(x), int(y), 16, 24, obs1, Vx, Vy, Ay, Ax);
-    Vx = VA.Vx;
-    Vy = VA.Vy;
-    Ax = VA.Ax;
-    Ay = VA.Ay;
-  }
+    Jugador J_Fx;
 
+    J_Fx.Px = Jug.Px;
+    J_Fx.Vx = Jug.Vx;
+    J_Fx.Ax = Jug.Ax;
+    J_Fx.flip = Jug.flip;
+  
+    return(J_Fx);
+    
 }
+
 //***************************************************************************************************************************************
-// Función para chequeo de overlap entre 1 superficie y el jugador
+// Función para generar reacciones para colisiones
 //***************************************************************************************************************************************
-vel_acel Colisiones(int posx_J, int posy_J, int ancho_J, int alto_J, Obstaculo obs, float V_ejex, float V_ejey, float A_ejey, float A_ejex){
+Jugador Colisiones(Jugador Jug, Obstaculo obs){
 
   // Se chequea el overlap entre el jugador indicado y el obstáculo indicado
-  int overlap = Check_overlap(obs.Px, obs.Py, posx_J, posy_J, obs.Ancho, obs.Alto, alto_J, ancho_J);
+  int overlap = Check_overlap(obs.Px, obs.Py, Jug.Px, Jug.Py, obs.Ancho, obs.Alto, Jug.Alto, Jug.Ancho);
 
   // Si existe overlap
   if(overlap == 1){ 
 
       // Chequeo de que region es en la que se encuentra
-      int variable_region = Regiones(posx_J, posy_J, alto_J, ancho_J, obs.Px, obs.Py, obs.Ancho, obs.Alto);
+      int variable_region = Regiones(Jug.Px, Jug.Py, Jug.Alto, Jug.Ancho, obs.Px, obs.Py, obs.Ancho, obs.Alto);
        
       // Si se encuentra en la región superior al obstáculo
       if(variable_region == 1){ 
             
         // Pintar borde superior, izquierdo y derecho.
-        H_line(posx_J -2, posy_J -1, 20, 0x0000); 
-        V_line(posx_J +17, posy_J, 24, 0x0000);
-        V_line(posx_J +18, posy_J, 24, 0x0000);
-        V_line(posx_J -1, posy_J, 24, 0x0000);
-        V_line(posx_J -2, posy_J, 24, 0x0000);
+        H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000); 
+        V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
+        V_line(Jug.Px +18, Jug.Py, 24, 0x0000);
+        V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
+        V_line(Jug.Px -2, Jug.Py, 24, 0x0000);
     
         // Alteración a velocidades y aceleración                                   
-        V_ejey = 0;
-        A_ejey = 0;                                                   // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
-        parado = 1;
+        Jug.Vy = 0;
+        Jug.Ay = 0;                                                   // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
+        Jug.parado = 1;
       }
     
       // Si se encuentra en la región central izquierda al obstáculo
       else if(variable_region == 2){
     
         // Pintar borde superior, izquierdo y posterior.
-        V_line(posx_J -1, posy_J, 24, 0x0000);
-        H_line(posx_J -2, posy_J -1, 20, 0x0000);
-        H_line(posx_J -2, posy_J +25, 20, 0x0000);
+        V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
+        H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000);
+        H_line(Jug.Px -2, Jug.Py +25, 20, 0x0000);
       
         // Alteración de la velocidad en x
-        V_ejex = ((-1)*(V_ejex));
+        Jug.Vx = ((-1)*(Jug.Vx));
       }
     
       // Si se encuentra en la región central derecha al obstáculo
       else if(variable_region == 3){
     
         // Pintar borde inferior, derecho y superior.
-        V_line(posx_J +17, posy_J, 24, 0x0000);
-        H_line(posx_J -2, posy_J -1, 20, 0x0000);
-        H_line(posx_J -2, posy_J +25, 20, 0x0000);
+        V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
+        H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000);
+        H_line(Jug.Px -2, Jug.Py +25, 20, 0x0000);
     
         // Alteración de la velocidad en x y la aceleración en x
-        V_ejex = ((-1)*(V_ejex));
-        A_ejex = ((-1)*(A_ejex));
+        Jug.Vx = ((-1)*(Jug.Vx));
+        Jug.Ax = ((-1)*(Jug.Ax));
       }
     
       // Si se encuentra en la región posterior al obstáculo
       else if(variable_region == 4){
     
         // Pintar borde inferior, izquierdo y derecho.
-        V_line(posx_J +17, posy_J, 24, 0x0000);
-        V_line(posx_J -1, posy_J, 24, 0x0000);
-        H_line(posx_J -2, posy_J -1, 20, 0x0000);
+        V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
+        V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
+        H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000);
     
         // Alteración de la velocidad en y
-        V_ejey = ((-1)*(V_ejey));
+        Jug.Vy = ((-1)*(Jug.Vy));
       }
     
       // Si se encuentra en una esquina
       else if (variable_region == 5){
         
         // Alterar la velocidad  "y"
-        V_ejey = ((-1)*(1.2)*(V_ejey));
-        V_ejex = ((-1)*(1.2)*(V_ejex));;
+        Jug.Vy = ((-1)*(1.2)*(Jug.Vy));
+        Jug.Vx = ((-1)*(1.2)*(Jug.Vx));;
       }
     
       /*
        * Para permitir que el jugador pueda caer libremente cuando se encuentra en una esquina, se chequea si está parado, de lo contrario, las esquinas repelen al jugador.
        */
       else {
-        if(parado == 0){
-          V_ejex = ((-1)*(V_ejex));
-          V_ejey = ((-1)*(V_ejey));
+        if(Jug.parado == 0){
+          Jug.Vx = ((-1)*(Jug.Vx));
+          Jug.Vy = ((-1)*(Jug.Vy));
         }
         else{
-          V_line(posx_J +17, posy_J, 24, 0x0000);
-          V_line(posx_J +18, posy_J, 24, 0x0000);
-          V_line(posx_J +19, posy_J, 24, 0x0000);
-          V_line(posx_J -1, posy_J, 24, 0x0000);
-          V_line(posx_J -2, posy_J, 24, 0x0000);
-          V_line(posx_J -3, posy_J, 24, 0x0000);
+          V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
+          V_line(Jug.Px +18, Jug.Py, 24, 0x0000);
+          V_line(Jug.Px +19, Jug.Py, 24, 0x0000);
+          V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
+          V_line(Jug.Px -2, Jug.Py, 24, 0x0000);
+          V_line(Jug.Px -3, Jug.Py, 24, 0x0000);
           }
        }
   }
@@ -402,24 +437,25 @@ vel_acel Colisiones(int posx_J, int posy_J, int ancho_J, int alto_J, Obstaculo o
   else{
 
     // Pintar todos los bordes exteriores para no dejar rastro en la LCD
-    V_line(posx_J -1, posy_J, 24, 0x0000);
-    V_line(posx_J +17, posy_J, 24, 0x0000);
-    H_line(posx_J -2, posy_J -1, 20, 0x0000);
-    H_line(posx_J -2, posy_J +25, 20, 0x0000);
+    V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
+    V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
+    H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000);
+    H_line(Jug.Px -2, Jug.Py +25, 20, 0x0000);
 
     // Dejar la gravedad constante y la variable de si está parado, en 0
-    A_ejey = Gravedad;
-    parado = 0;
+    Jug.Ay = Gravedad;
+    Jug.parado = 0;
   }
   
-  vel_acel VA;
+  Jugador J_out;
 
-  VA.Vx = V_ejex;
-  VA.Vy = V_ejey;
-  VA.Ax = A_ejex;
-  VA.Ay = A_ejey;
+  J_out.Vx = Jug.Vx;
+  J_out.Vy = Jug.Vy;
+  J_out.Ax = Jug.Ax;
+  J_out.Ay = Jug.Ay;
+  J_out.parado = Jug.parado;
 
-  return(VA);
+  return(J_out);
 }
 
 //***************************************************************************************************************************************
