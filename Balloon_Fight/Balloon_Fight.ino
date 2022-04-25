@@ -95,16 +95,15 @@ int vector_y1 = 0;
   int Game_Over = 0;
   float t = 1.5;
   int cont_anim1 = 0;
+  int anim1 = 0;
+  int anim2 = 0;
   
 
   //***********************************************************************************************************************************
   // Declaración de objetos
   //***********************************************************************************************************************************
-  Obstaculo obs1 = {60, 70, 100, 20};                             // Se crea un objeto tipo obstáculo que             
-  vel_acel VA;                                                    // Se crea una variable en la que se guardan los parámetros de retorno de subrutina "Colisiones"
+  Obstaculo obs1 = {60, 70, 100, 20};                             // Se crea un objeto tipo obstáculo que      
   Jugador J1 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0};     // Objeto tipo "Jugador" con todos los parámetros para el mismo
-  Jugador J_uno;                                                  // Variable para guardar parámetros para el jugador
-  Jugador J1_F;
 
 //***************************************************************************************************************************************
 // Functions Prototypes
@@ -159,6 +158,7 @@ void loop() {
   
   while(Game_Over == 0) {
     
+    
     //***********************************************************************************************************************************
     // Implementación de físicas (ambos ejes)
     //***********************************************************************************************************************************
@@ -176,25 +176,35 @@ void loop() {
      * genera el impulso hacia arriba. Por esto mismo se utilizó esto para generar la animación del aleteo. Cuando esta variable se vuelve 1, la animación se ve alterada y al estar corriendo el juego,
      * el personaje pareciera aletear para adquirir cierta altura.
      */
-    if(J1.impulso == 1){
-      LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy, 5, 2, J1.flip, 0);      
-    }
-    else{
-      LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy, 5, 3, J1.flip, 0);
-    }
+    
 
     /*
      * Cuando la variable "parado" es 1, se debe evaluar la dirección de la velocidad por su magnitud y así realizar la animación correspondiente.
      */
-//    cont_anim1 += 1;
-//       
-//    if(parado == 1){
-//      if(J1.Vx == 0){
-//        int anim2 = (cont_anim1 / 15) % 4;
-//        LCD_Sprite(x,100,16,16,kirbys,4,anim2,0,0);
-//        V_line( x -1, 100, 16, 0x74DA);
-//      }
-//    }
+    cont_anim1 += 1;
+
+    if(J1.parado == 1){
+      if(abs(J1.Vx) < 0.001){
+        anim1 = (cont_anim1 / 35) % 3;
+        LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy_parado, 3, anim1, J1.flip, 0);
+      }
+      else{
+        anim2 = (cont_anim1 / 25) % 4;
+        LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy_caminando, 4, anim2, J1.flip, 0);
+        if(J1.Vx < 0){
+          V_line(J1.Px +15, J1.Py, 24, 0x0000);
+          V_line(J1.Px +16, J1.Py, 24, 0x0000);
+        }
+      }
+    }
+    else{
+      if(J1.impulso == 1){
+        LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy, 5, 2, J1.flip, 0);      
+      }
+      else{
+        LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy, 5, 3, J1.flip, 0);
+      }
+    }
 
     //***********************************************************************************************************************************
     // Colisiones Primer obstáculo
@@ -321,10 +331,11 @@ Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
 // Función para generar reacciones para colisiones
 //***************************************************************************************************************************************
 Jugador Colisiones(Jugador Jug, Obstaculo obs){
+  int cuenta_atras_parado = 0;
 
   // Se chequea el overlap entre el jugador indicado y el obstáculo indicado
   int overlap = Check_overlap(obs.Px, obs.Py, Jug.Px, Jug.Py, obs.Ancho, obs.Alto, Jug.Alto, Jug.Ancho);
-
+  
   // Si existe overlap
   if(overlap == 1){ 
 
@@ -345,6 +356,8 @@ Jugador Colisiones(Jugador Jug, Obstaculo obs){
         Jug.Vy = 0;
         Jug.Ay = 0;                                                   // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
         Jug.parado = 1;
+        
+        cuenta_atras_parado = 3;
       }
     
       // Si se encuentra en la región central izquierda al obstáculo
@@ -421,7 +434,13 @@ Jugador Colisiones(Jugador Jug, Obstaculo obs){
 
     // Dejar la gravedad constante y la variable de si está parado, en 0
     Jug.Ay = Gravedad;
-    Jug.parado = 0;
+
+    if(cuenta_atras_parado == 0){
+      Jug.parado = 0; 
+    }
+    else{
+      cuenta_atras_parado -= 1;
+    }
   }
 
   return(Jug);
