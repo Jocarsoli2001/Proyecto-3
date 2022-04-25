@@ -103,9 +103,9 @@ int vector_y1 = 0;
   // Declaración de objetos
   //***********************************************************************************************************************************
   Obstaculo obs1 = {105, 100, 100, 20};                           // Se crea un objeto tipo obstáculo
-  Obstaculo obs2 = {0, 170, 70, 20};                              // Se crea un objeto tipo obstáculo      
+  Obstaculo obs2 = {0, 170, 70, 20};                              // Se crea un objeto tipo obstáculo
+  Obstaculo obs3 = {240, 170, 70, 20};                            // Se crea un objeto tipo obstáculo       
   Jugador J1 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0};     // Objeto tipo "Jugador" con todos los parámetros para el mismo
-  Jugador J_estado;
 
 //***************************************************************************************************************************************
 // Functions Prototypes
@@ -151,6 +151,7 @@ void setup() {
   FillRect(0, 0, 319, 239, 0x0000);
   FillRect(obs1.Px + 4, obs1.Py + 4, obs1.Ancho - 6, obs1.Alto - 6, 0x2703);
   FillRect(obs2.Px + 4, obs2.Py + 4, obs2.Ancho - 6, obs2.Alto - 6, 0x2703);
+  FillRect(obs3.Px + 4, obs3.Py + 4, obs3.Ancho - 6, obs3.Alto - 6, 0x2703);
 
 
 }
@@ -219,9 +220,15 @@ void loop() {
     //***********************************************************************************************************************************
     // Colisiones Primer obstáculo
     //***********************************************************************************************************************************
-    J1 = Colisiones(J1, obs2);
-    J1 = Colisiones(J1, obs1);
-    
+    if((J1.Px + J1.Ancho) > 0 && J1.Px < (obs2.Px + obs2.Ancho + 18)){
+      J1 = Colisiones(J1, obs2);
+    }
+    else if((J1.Px + J1.Ancho) > (obs2.Px + obs2.Ancho + 18) && J1.Px < (obs1.Px + obs1.Ancho + 18)){
+      J1 = Colisiones(J1, obs1);
+    }
+    else if((J1.Px + J1.Ancho) > (obs1.Px + obs1.Ancho + 18) && J1.Px < 319){
+      J1 = Colisiones(J1, obs3);
+    }
     
   }
 
