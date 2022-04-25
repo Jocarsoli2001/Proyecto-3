@@ -102,9 +102,9 @@ int vector_y1 = 0;
   //***********************************************************************************************************************************
   // Declaración de objetos
   //***********************************************************************************************************************************
-  Obstaculo obs1 = {105, 100, 100, 20};                           // Se crea un objeto tipo obstáculo
-  Obstaculo obs2 = {0, 170, 70, 20};                              // Se crea un objeto tipo obstáculo
-  Obstaculo obs3 = {240, 170, 70, 20};                            // Se crea un objeto tipo obstáculo       
+  Obstaculo obs1 = {110, 100, 100, 20};                           // Se crea un objeto tipo obstáculo
+  Obstaculo obs2 = {0, 190, 70, 60};                              // Se crea un objeto tipo obstáculo
+  Obstaculo obs3 = {240, 190, 90, 60};                            // Se crea un objeto tipo obstáculo       
   Jugador J1 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0};     // Objeto tipo "Jugador" con todos los parámetros para el mismo
 
 //***************************************************************************************************************************************
