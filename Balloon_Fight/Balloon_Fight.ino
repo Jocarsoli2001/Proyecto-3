@@ -40,6 +40,7 @@
 #define Derecha_J1 PC_7
 #define Gravedad 0.001
 
+
 //***************************************************************************************************************************************
 // Structs
 //***************************************************************************************************************************************
@@ -54,8 +55,8 @@ vel_acel;
 typedef struct{
   float Px;
   float Py;
-  float Ancho;
-  float Alto;
+  int Ancho;
+  int Alto;
   float Vx;
   float Vy;
   float Ax;
@@ -67,10 +68,10 @@ typedef struct{
 Jugador;
 
 typedef struct{
-  float Px;
-  float Py;
-  float Ancho;
-  float Alto;
+  int Px;
+  int Py;
+  int Ancho;
+  int Alto;
 }
 Obstaculo;
 
@@ -78,7 +79,11 @@ Obstaculo;
 // Variables
 //***************************************************************************************************************************************
 int DPINS[] = {PB_0, PB_1, PB_2, PB_3, PB_4, PB_5, PB_6, PB_7};
-
+int volando = 0;
+int overlap_J1 = 0;
+int region_obs1 = 0;
+int vector_x1 = 0;
+int vector_y1 = 0;
 
   //***********************************************************************************************************************************
   // Variables comunes
@@ -153,6 +158,7 @@ void setup() {
 void loop() {
   
   while(Game_Over == 0) {
+    
     //***********************************************************************************************************************************
     // Implementación de físicas (ambos ejes)
     //***********************************************************************************************************************************
@@ -160,9 +166,8 @@ void loop() {
     DE_J1 = digitalRead(Derecha_J1);
     Estado_J1 = digitalRead(Jugador_1);
     
-    J1_F = Fisicas(J1, Estado_J1, IZ_J1, DE_J1);
-    J1 = J1_F;
-    
+    J1 = Fisicas(J1, Estado_J1, IZ_J1, DE_J1);
+
     //***********************************************************************************************************************************
     // Comparación de velocidad
     //***********************************************************************************************************************************
@@ -194,8 +199,7 @@ void loop() {
     //***********************************************************************************************************************************
     // Colisiones Primer obstáculo
     //***********************************************************************************************************************************
-    J_uno = Colisiones(J1, obs1);
-    J1 = J_uno;
+    J1 = Colisiones(J1, obs1);
   }
 
 }
@@ -205,24 +209,11 @@ void loop() {
 // Función que genera el conjunto de físicas para 1 solo jugador
 //***************************************************************************************************************************************
 Jugador Fisicas(Jugador Jug, int Boton_impulso, int Boton_Iz, int Boton_Der){
-  Jugador J_Fx;
-  Jugador J_Fy;
+  
+  Jug = Fisicas_x(Jug, Boton_Iz, Boton_Der);
+  Jug = Fisicas_y(Jug, Boton_impulso);
 
-  J_Fx = Fisicas_x(Jug, Boton_Iz, Boton_Der);
-  J_Fy = Fisicas_y(Jug, Boton_impulso);
-
-  Jugador J_FT;
-
-  J_FT.Vx = J_Fx.Vx;
-  J_FT.Ax = J_Fx.Ax;
-  J_FT.Px = J_Fx.Px;
-  J_FT.flip = J_Fx.flip;
-  J_FT.Vy = J_Fy.Vy;
-  J_FT.Ay = J_Fy.Ay;
-  J_FT.Py = J_Fy.Py;
-  J_FT.impulso = J_Fy.impulso;
-
-  return(J_FT);
+  return(Jug);
 }
 
 //***************************************************************************************************************************************
@@ -263,15 +254,8 @@ Jugador Fisicas_y(Jugador Jug, int Boton_impulso){
     else{
       (Jug.Py) += (Jug.Vy)*(t) + (0.5)*(Jug.Ay)*(t*t);            // Si el jugador se encuentra entre 0 y 240 en el eje y, la posición vertical está dada por esta fórmula
     }
-
-    Jugador J_Fy;
-
-    J_Fy.Py = Jug.Py;
-    J_Fy.Vy = Jug.Vy;
-    J_Fy.Ay = Jug.Ay;
-    J_Fy.impulso = Jug.impulso;
   
-    return(J_Fy);
+    return(Jug);
 }
 
 //***************************************************************************************************************************************
@@ -329,14 +313,7 @@ Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
       }
     }
 
-    Jugador J_Fx;
-
-    J_Fx.Px = Jug.Px;
-    J_Fx.Vx = Jug.Vx;
-    J_Fx.Ax = Jug.Ax;
-    J_Fx.flip = Jug.flip;
-  
-    return(J_Fx);
+    return(Jug);
     
 }
 
@@ -446,16 +423,8 @@ Jugador Colisiones(Jugador Jug, Obstaculo obs){
     Jug.Ay = Gravedad;
     Jug.parado = 0;
   }
-  
-  Jugador J_out;
 
-  J_out.Vx = Jug.Vx;
-  J_out.Vy = Jug.Vy;
-  J_out.Ax = Jug.Ax;
-  J_out.Ay = Jug.Ay;
-  J_out.parado = Jug.parado;
-
-  return(J_out);
+  return(Jug);
 }
 
 //***************************************************************************************************************************************
