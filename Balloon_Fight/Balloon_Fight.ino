@@ -102,8 +102,10 @@ int vector_y1 = 0;
   //***********************************************************************************************************************************
   // Declaración de objetos
   //***********************************************************************************************************************************
-  Obstaculo obs1 = {60, 70, 100, 20};                             // Se crea un objeto tipo obstáculo que      
+  Obstaculo obs1 = {105, 100, 100, 20};                           // Se crea un objeto tipo obstáculo
+  Obstaculo obs2 = {0, 170, 70, 20};                              // Se crea un objeto tipo obstáculo      
   Jugador J1 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0};     // Objeto tipo "Jugador" con todos los parámetros para el mismo
+  Jugador J_estado;
 
 //***************************************************************************************************************************************
 // Functions Prototypes
@@ -148,6 +150,7 @@ void setup() {
 
   FillRect(0, 0, 319, 239, 0x0000);
   FillRect(obs1.Px + 4, obs1.Py + 4, obs1.Ancho - 6, obs1.Alto - 6, 0x2703);
+  FillRect(obs2.Px + 4, obs2.Py + 4, obs2.Ancho - 6, obs2.Alto - 6, 0x2703);
 
 
 }
@@ -169,34 +172,41 @@ void loop() {
     J1 = Fisicas(J1, Estado_J1, IZ_J1, DE_J1);
 
     //***********************************************************************************************************************************
-    // Comparación de velocidad
+    // Sprites
     //***********************************************************************************************************************************
     /*
-     * Cuando el jugador presiona el botón para generar el impulso hacia arriba, la variable "presionado_J1" se vuelve 1 mientras el botón está presionado y hasta que no se suelta el botón, no se
-     * genera el impulso hacia arriba. Por esto mismo se utilizó esto para generar la animación del aleteo. Cuando esta variable se vuelve 1, la animación se ve alterada y al estar corriendo el juego,
-     * el personaje pareciera aletear para adquirir cierta altura.
-     */
-    
-
-    /*
-     * Cuando la variable "parado" es 1, se debe evaluar la dirección de la velocidad por su magnitud y así realizar la animación correspondiente.
+     * En este caso evaluamos el estado del jugador. Si este se encuentra sobre una superficie, si está parado sin moverse, genera una animación y si se mueve en el eje x, se genera una animación de  
+     * caminata para que el jugador tenga movilidad.
      */
     cont_anim1 += 1;
 
+    // Si el jugador se encuentra sobre una superficie:
     if(J1.parado == 1){
+
+      // Si la velocidad en x se aproxima a 0:
       if(abs(J1.Vx) < 0.001){
+
+        // Generar animación para estar parado
         anim1 = (cont_anim1 / 35) % 3;
         LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy_parado, 3, anim1, J1.flip, 0);
       }
+
+      // Si la velocidad en x es mayor o menor a 0:
       else{
-        anim2 = (cont_anim1 / 25) % 4;
+
+        // Generar animación para caminar
+        anim2 = (cont_anim1 / 20) % 4;
         LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy_caminando, 4, anim2, J1.flip, 0);
+
+        // Si la velocidad es negativa, dibujar franjas para evitar ver desfase.
         if(J1.Vx < 0){
           V_line(J1.Px +15, J1.Py, 24, 0x0000);
           V_line(J1.Px +16, J1.Py, 24, 0x0000);
         }
       }
     }
+
+    // Si el jugador no está sobre una superficie, realizar la animación de estar volando.
     else{
       if(J1.impulso == 1){
         LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy, 5, 2, J1.flip, 0);      
@@ -209,12 +219,16 @@ void loop() {
     //***********************************************************************************************************************************
     // Colisiones Primer obstáculo
     //***********************************************************************************************************************************
+    J1 = Colisiones(J1, obs2);
     J1 = Colisiones(J1, obs1);
+    
+    
   }
 
 }
 
 //---------------------------------------------------- Subrutinas -----------------------------------------------------------------------
+
 //***************************************************************************************************************************************
 // Función que genera el conjunto de físicas para 1 solo jugador
 //***************************************************************************************************************************************
@@ -331,8 +345,7 @@ Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
 // Función para generar reacciones para colisiones
 //***************************************************************************************************************************************
 Jugador Colisiones(Jugador Jug, Obstaculo obs){
-  int cuenta_atras_parado = 0;
-
+  
   // Se chequea el overlap entre el jugador indicado y el obstáculo indicado
   int overlap = Check_overlap(obs.Px, obs.Py, Jug.Px, Jug.Py, obs.Ancho, obs.Alto, Jug.Alto, Jug.Ancho);
   
@@ -356,8 +369,6 @@ Jugador Colisiones(Jugador Jug, Obstaculo obs){
         Jug.Vy = 0;
         Jug.Ay = 0;                                                   // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
         Jug.parado = 1;
-        
-        cuenta_atras_parado = 3;
       }
     
       // Si se encuentra en la región central izquierda al obstáculo
@@ -420,6 +431,9 @@ Jugador Colisiones(Jugador Jug, Obstaculo obs){
           V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
           V_line(Jug.Px -2, Jug.Py, 24, 0x0000);
           V_line(Jug.Px -3, Jug.Py, 24, 0x0000);
+
+          Jug.Vx = ((1)*(Jug.Vx));
+          Jug.Vy = ((1)*(Jug.Vy));
           }
        }
   }
@@ -434,13 +448,7 @@ Jugador Colisiones(Jugador Jug, Obstaculo obs){
 
     // Dejar la gravedad constante y la variable de si está parado, en 0
     Jug.Ay = Gravedad;
-
-    if(cuenta_atras_parado == 0){
-      Jug.parado = 0; 
-    }
-    else{
-      cuenta_atras_parado -= 1;
-    }
+    Jug.parado = 0; 
   }
 
   return(Jug);
