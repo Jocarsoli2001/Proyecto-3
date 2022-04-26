@@ -137,6 +137,8 @@ void setup() {
   
   SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
   Serial.begin(115200);
+  Serial1.begin(115200);
+  
   GPIOPadConfigSet(GPIO_PORTB_BASE, 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7, GPIO_STRENGTH_8MA, GPIO_PIN_TYPE_STD_WPU);
   Serial.println("Inicio");
   SPI.setModule(0);
@@ -150,8 +152,8 @@ void setup() {
 
   FillRect(0, 0, 319, 239, 0x0000);
   FillRect(obs1.Px + 4, obs1.Py + 4, obs1.Ancho - 6, obs1.Alto - 6, 0x2703);
-  FillRect(obs2.Px + 4, obs2.Py + 4, obs2.Ancho - 6, obs2.Alto - 6, 0x2703);
-  FillRect(obs3.Px + 4, obs3.Py + 4, obs3.Ancho - 6, obs3.Alto - 6, 0x2703);
+  FillRect(obs2.Px + 4, obs2.Py + 4, obs2.Ancho - 6, obs2.Alto - 7, 0x2703);
+  FillRect(obs3.Px + 7, obs3.Py + 4, obs3.Ancho - 6, obs3.Alto - 6, 0x2703);
 
 
 }
@@ -218,8 +220,11 @@ void loop() {
     }
 
     //***********************************************************************************************************************************
-    // Colisiones Primer obstáculo
+    // Colisiones Primer nivel
     //***********************************************************************************************************************************
+    /*
+     * Se dividió en diferentes regiones la pantalla (en eje x) para que por región realizara las colisiones con el obstáculo que se encuentra en esa misma región. 
+     */
     if((J1.Px + J1.Ancho) > 0 && J1.Px < (obs2.Px + obs2.Ancho + 18)){
       J1 = Colisiones(J1, obs2);
     }
@@ -305,14 +310,14 @@ Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
       Jug.flip = 1;                                               // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
 
-    if((Jug.Vx)<=0.2 && (Jug.Vx)>=-0.2){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+    if((Jug.Vx)<=0.3 && (Jug.Vx)>=-0.3){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
       (Jug.Vx) += (Jug.Ax)*(t);
     }
-    else if((Jug.Vx)>0.2){
-      (Jug.Vx) = 0.2;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+    else if((Jug.Vx)>0.3){
+      (Jug.Vx) = 0.3;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
     }
-    else if(Jug.Vx<-0.2){
-      (Jug.Vx) = -0.2;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+    else if(Jug.Vx<-0.3){
+      (Jug.Vx) = -0.3;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
     }
 
     /* 
