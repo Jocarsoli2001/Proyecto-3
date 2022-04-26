@@ -1,3 +1,6 @@
+#include "pitches.h"
+#include <Arduino.h>
+
 //-------------------------------- Definición de pines --------------------------------
 
 // Jugador 1
@@ -9,6 +12,8 @@
 #define IZ_J2 18
 #define DE_J2 19
 #define IMP_J2 21
+
+#define Buzzer_pin 22
 
 //------------------------------------- Variables -------------------------------------
 int I_J1 = 0;
@@ -110,4 +115,8 @@ void loop() {
 
   Serial2.write(dato_enviado);
 
+  
+  // ---------------------------------- Música ---------------------------------------
+  
+  
 }

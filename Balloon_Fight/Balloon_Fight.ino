@@ -101,6 +101,7 @@ int vector_y1 = 0;
   int anim1 = 0;
   int anim2 = 0;
   int Datos_control_binario = 0b000000;
+  int datos = 0;
   
 
   //***********************************************************************************************************************************
@@ -175,27 +176,18 @@ void loop() {
     //***********************************************************************************************************************************
     while(Serial2.available()){
       Datos_control_binario = Serial2.read();
-
-      if((Datos_control_binario & 0b100000) == 0b100000){ CTRL1.Izquierda == 1; } else { CTRL1.Izquierda == 0; }
-      if((Datos_control_binario & 0b010000) == 0b010000){ CTRL1.Derecha == 1; } else { CTRL1.Derecha == 0; }
-      if((Datos_control_binario & 0b001000) == 0b001000){ CTRL1.Impulso == 1; } else { CTRL1.Impulso == 0; }
-      if((Datos_control_binario & 0b000100) == 0b000100){ CTRL2.Izquierda == 1; } else { CTRL2.Izquierda == 0; }
-      if((Datos_control_binario & 0b000010) == 0b000010){ CTRL2.Derecha == 1; } else { CTRL2.Derecha == 0; }
-      if((Datos_control_binario & 0b000001) == 0b000001){ CTRL2.Impulso == 1; } else { CTRL2.Impulso == 0; }
     }
 
-    
+    if((Datos_control_binario & 0b100000) == 0b100000){ CTRL1.Izquierda = 1; } else { CTRL1.Izquierda = 0; }
+    if((Datos_control_binario & 0b010000) == 0b010000){ CTRL1.Derecha = 1; } else { CTRL1.Derecha = 0; }
+    if((Datos_control_binario & 0b001000) == 0b001000){ CTRL1.Impulso = 1; } else { CTRL1.Impulso = 0; }
+    if((Datos_control_binario & 0b000100) == 0b000100){ CTRL2.Izquierda = 1; } else { CTRL2.Izquierda = 0; }
+    if((Datos_control_binario & 0b000010) == 0b000010){ CTRL2.Derecha = 1; } else { CTRL2.Derecha = 0; }
+    if((Datos_control_binario & 0b000001) == 0b000001){ CTRL2.Impulso = 1; } else { CTRL2.Impulso = 0; }
     
     //***********************************************************************************************************************************
     // Implementación de físicas (ambos ejes)
     //***********************************************************************************************************************************
-    Serial.print(" Control 1 izquierda: ");
-    Serial.print(CTRL1.Izquierda);
-    Serial.print(" Control 1 derecha: ");
-    Serial.print(CTRL1.Derecha);
-    Serial.print(" Control 1 impulso: ");
-    Serial.println(CTRL1.Impulso);
-    
     J1 = Fisicas(J1, CTRL1.Impulso, CTRL1.Izquierda, CTRL1.Derecha);
 
     //***********************************************************************************************************************************
@@ -328,20 +320,20 @@ Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
       (Jug.Ax) = -0.0007;                                         // Se genera una aceleración para un giro más suave
       Jug.flip = 0;                                               // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
-    if(Boton_Der == 1){                                        // En el eje x, cuando se presiona el botón para mover a la derecha, se agrega una velocidad en el eje x+, por lo va a la derecha
+    if(Boton_Der == 1){                                           // En el eje x, cuando se presiona el botón para mover a la derecha, se agrega una velocidad en el eje x+, por lo va a la derecha
       (Jug.Vx) += 0.003;
       (Jug.Ax) = 0.0007;                                          // Se genera una aceleración para un giro más suave
       Jug.flip = 1;                                               // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
 
-    if((Jug.Vx)<=0.3 && (Jug.Vx)>=-0.3){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+    if((Jug.Vx)<=0.2 && (Jug.Vx)>=-0.2){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
       (Jug.Vx) += (Jug.Ax)*(t);
     }
-    else if((Jug.Vx)>0.3){
-      (Jug.Vx) = 0.3;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+    else if((Jug.Vx)>0.2){
+      (Jug.Vx) = 0.2;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
     }
-    else if(Jug.Vx<-0.3){
-      (Jug.Vx) = -0.3;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+    else if(Jug.Vx<-0.2){
+      (Jug.Vx) = -0.2;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
     }
 
     /* 
