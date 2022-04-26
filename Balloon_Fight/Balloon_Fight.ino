@@ -75,6 +75,13 @@ typedef struct{
 }
 Obstaculo;
 
+typedef struct{
+  int Izquierda;
+  int Derecha;
+  int Impulso;
+}
+Control;
+
 //***************************************************************************************************************************************
 // Variables
 //***************************************************************************************************************************************
@@ -88,15 +95,12 @@ int vector_y1 = 0;
   //***********************************************************************************************************************************
   // Variables comunes
   //***********************************************************************************************************************************
-  int Estado_J1 = 0;
-  int presionado_J1 = 0;
-  int IZ_J1 = 0;
-  int DE_J1 = 0;
   int Game_Over = 0;
   float t = 1.5;
   int cont_anim1 = 0;
   int anim1 = 0;
   int anim2 = 0;
+  int Datos_control_binario = 0b000000;
   
 
   //***********************************************************************************************************************************
@@ -106,6 +110,8 @@ int vector_y1 = 0;
   Obstaculo obs2 = {0, 190, 70, 60};                              // Se crea un objeto tipo obstáculo
   Obstaculo obs3 = {240, 190, 90, 60};                            // Se crea un objeto tipo obstáculo       
   Jugador J1 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0};     // Objeto tipo "Jugador" con todos los parámetros para el mismo
+  Control CTRL1 = {0, 0, 0};                                      // Objeto tipo control que guarda todos los parámetros mandados por el control 1
+  Control CTRL2 = {0, 0, 0};                                      // Objeto tipo control que guarda todos los parámetros mandados por el control 2
 
 //***************************************************************************************************************************************
 // Functions Prototypes
@@ -137,7 +143,7 @@ void setup() {
   
   SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
   Serial.begin(115200);
-  Serial1.begin(115200);
+  Serial2.begin(115200);
   
   GPIOPadConfigSet(GPIO_PORTB_BASE, 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7, GPIO_STRENGTH_8MA, GPIO_PIN_TYPE_STD_WPU);
   Serial.println("Inicio");
@@ -163,16 +169,34 @@ void setup() {
 void loop() {
   
   while(Game_Over == 0) {
+
+    //***********************************************************************************************************************************
+    // Lectura de botones provenientes de los controles (ESP32)
+    //***********************************************************************************************************************************
+    while(Serial2.available()){
+      Datos_control_binario = Serial2.read();
+
+      if((Datos_control_binario & 0b100000) == 0b100000){ CTRL1.Izquierda == 1; } else { CTRL1.Izquierda == 0; }
+      if((Datos_control_binario & 0b010000) == 0b010000){ CTRL1.Derecha == 1; } else { CTRL1.Derecha == 0; }
+      if((Datos_control_binario & 0b001000) == 0b001000){ CTRL1.Impulso == 1; } else { CTRL1.Impulso == 0; }
+      if((Datos_control_binario & 0b000100) == 0b000100){ CTRL2.Izquierda == 1; } else { CTRL2.Izquierda == 0; }
+      if((Datos_control_binario & 0b000010) == 0b000010){ CTRL2.Derecha == 1; } else { CTRL2.Derecha == 0; }
+      if((Datos_control_binario & 0b000001) == 0b000001){ CTRL2.Impulso == 1; } else { CTRL2.Impulso == 0; }
+    }
+
     
     
     //***********************************************************************************************************************************
     // Implementación de físicas (ambos ejes)
     //***********************************************************************************************************************************
-    IZ_J1 = digitalRead(Izquierda_J1);
-    DE_J1 = digitalRead(Derecha_J1);
-    Estado_J1 = digitalRead(Jugador_1);
+    Serial.print(" Control 1 izquierda: ");
+    Serial.print(CTRL1.Izquierda);
+    Serial.print(" Control 1 derecha: ");
+    Serial.print(CTRL1.Derecha);
+    Serial.print(" Control 1 impulso: ");
+    Serial.println(CTRL1.Impulso);
     
-    J1 = Fisicas(J1, Estado_J1, IZ_J1, DE_J1);
+    J1 = Fisicas(J1, CTRL1.Impulso, CTRL1.Izquierda, CTRL1.Derecha);
 
     //***********************************************************************************************************************************
     // Sprites
@@ -256,11 +280,11 @@ Jugador Fisicas(Jugador Jug, int Boton_impulso, int Boton_Iz, int Boton_Der){
 // Función para generar físicas en eje y
 //***************************************************************************************************************************************
 Jugador Fisicas_y(Jugador Jug, int Boton_impulso){
-  if(Boton_impulso == HIGH)                                       // Observar si el botón de impulso está presionado
+  if(Boton_impulso == 1)                                       // Observar si el botón de impulso está presionado
     {
       Jug.impulso = 1;                                            // Cambiar estado de variable Jug.impulso
     }
-    if (Boton_impulso == LOW && Jug.impulso == 1 )                // Detectar cuando el botón de impulso se soltó
+    if (Boton_impulso == 0 && Jug.impulso == 1 )                // Detectar cuando el botón de impulso se soltó
     {
       (Jug.Vy) -= 0.2;                                            // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
       Jug.impulso = 0;                                            // Cambiar variable presionado_J1 como antirebote
@@ -298,13 +322,13 @@ Jugador Fisicas_y(Jugador Jug, int Boton_impulso){
 // Función para generar físicas en eje x
 //***************************************************************************************************************************************
 Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
-  if(Boton_Iz == HIGH)                                            // En el eje x, cuando se presiona el botón para mover a la izquierda, se agrega una velocidad en el eje x-, por lo va a la izquierda
+    if(Boton_Iz == 1)                                             // En el eje x, cuando se presiona el botón para mover a la izquierda, se agrega una velocidad en el eje x-, por lo va a la izquierda
     {
       (Jug.Vx) -= 0.003;                                                 
       (Jug.Ax) = -0.0007;                                         // Se genera una aceleración para un giro más suave
       Jug.flip = 0;                                               // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
-    if(Boton_Der == HIGH){                                        // En el eje x, cuando se presiona el botón para mover a la derecha, se agrega una velocidad en el eje x+, por lo va a la derecha
+    if(Boton_Der == 1){                                        // En el eje x, cuando se presiona el botón para mover a la derecha, se agrega una velocidad en el eje x+, por lo va a la derecha
       (Jug.Vx) += 0.003;
       (Jug.Ax) = 0.0007;                                          // Se genera una aceleración para un giro más suave
       Jug.flip = 1;                                               // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
@@ -329,7 +353,7 @@ Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
     }
     else if((Jug.Px) < 0){
       (Jug.Px) = 320;
-      FillRect(0, 0, 19, 239, 0x0000);                            // Si el jugador sobrepasa la coordenada "x = 0", entonces hacer un rectángulo vertical para que no queden marcas del sprite.
+      FillRect(0, 0, 19, 194, 0x0000);                            // Si el jugador sobrepasa la coordenada "x = 0", entonces hacer un rectángulo vertical para que no queden marcas del sprite.
     }
     else{
       (Jug.Px) += (Jug.Vx)*(t) + (0.5)*(Jug.Ax)*(t*t);
@@ -339,7 +363,7 @@ Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
      * Si no se detecta cambios en los botones de movimiento, se suma una aceleración en dirección contraria a la que se lleva, para generar una desaceleración
      * y así llegar al punto de reposo en el aire
      */
-    if(Boton_Iz == LOW && Boton_Der == LOW){ 
+    if(Boton_Iz == 0 && Boton_Der == 0){ 
       (Jug.Ax) = 0;
       if(Jug.parado == 1){
         (Jug.Vx) = (0.9)*(Jug.Vx);

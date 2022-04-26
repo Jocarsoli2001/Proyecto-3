@@ -17,6 +17,13 @@ int Im_J1 = 0;
 int I_J2 = 0;
 int D_J2 = 0;
 int Im_J2 = 0;
+int izquierda_J1 = 0;
+int derecha_J1 = 0;
+int impulso_J1 = 0;
+int izquierda_J2 = 0;
+int derecha_J2 = 0;
+int impulso_J2 = 0;
+int dato_enviado = 0b000000;
 
 //------------------------------ Prototipo de funciones -------------------------------
 void Retorno_botones(int boton);
@@ -43,8 +50,6 @@ void setup() {
 // Main Loop
 //*************************************************************************************
 void loop() {
-  Serial.write("|");                                                // Escribir "|" como indicador que a partir de ese momento comenzarán a llegar 6 datos consecutivos
-
   // ------------------------- Lectura de pines digitales -----------------------------
   I_J1 = digitalRead(IZ_J1);
   D_J1 = digitalRead(DE_J1);
@@ -54,32 +59,55 @@ void loop() {
   Im_J2 = digitalRead(IMP_J2);
   
   // ---------------------------------- Botones ---------------------------------------
-  Serial.println("|");
-  Serial.print(" Botón izquierdo J1: ");
-  Retorno_botones(I_J1);
-  Serial.print(" Botón derecho J1: ");
-  Retorno_botones(D_J1);
-  Serial.print(" Botón impulso J1: ");
-  Retorno_botones(Im_J1);
-  Serial.print(" Botón izquierdo J2: ");
-  Retorno_botones(I_J2);
-  Serial.print(" Botón derecho J2: ");
-  Retorno_botones(D_J2);
-  Serial.print(" Botón impulso J2: ");
-  Retorno_botones(Im_J2);
 
-}
-
-void Retorno_botones(int boton){
-  switch(boton){
-    case LOW:
-      Serial.println(0);
-      break;
-    case HIGH:
-      Serial.println(1);
-      break;
-    default:
-      Serial.println(0);
-      break;
+  // Botón de la izquierda en jugador 1 
+  if(I_J1 == HIGH){
+    dato_enviado = dato_enviado | 0b100000;
   }
+  else if(I_J1 == LOW && (dato_enviado & 0b100000) == 0b100000){
+    dato_enviado = dato_enviado ^ 0b100000;
+  }
+
+  // Botón de la derecha en jugador 1 
+  if(D_J1 == HIGH){
+    dato_enviado = dato_enviado | 0b010000;
+  }
+  else if(D_J1 == LOW && (dato_enviado & 0b010000) == 0b010000){
+    dato_enviado = dato_enviado ^ 0b010000;
+  }
+
+  // Botón de impulso en jugador 1 
+  if(Im_J1 == HIGH){
+    dato_enviado = dato_enviado | 0b001000;
+  }
+  else if(Im_J1 == LOW && (dato_enviado & 0b001000) == 0b001000){ 
+    dato_enviado = dato_enviado ^ 0b001000;
+  }
+
+  // Botón de la izquierda en jugador 2 
+  if(I_J2 == HIGH){
+    dato_enviado = dato_enviado | 0b000100;
+  }
+  else if(I_J2 == LOW && (dato_enviado & 0b000100) == 0b000100){
+    dato_enviado = dato_enviado ^ 0b000100;
+  }
+
+  // Botón de la derecha en jugador 2 
+  if(D_J2 == HIGH){
+    dato_enviado = dato_enviado | 0b000010;
+  }
+  else if(D_J2 == LOW && (dato_enviado & 0b000010) == 0b000010){
+    dato_enviado = dato_enviado ^ 0b000010;
+  }
+
+  // Botón de impulso en jugador 2 
+  if(Im_J2 == HIGH){
+    dato_enviado = dato_enviado | 0b000001;
+  }
+  else if(D_J2 == LOW && (dato_enviado & 0b000001) == 0b000001){
+    dato_enviado = dato_enviado ^ 0b000001;
+  }
+
+  Serial2.write(dato_enviado);
+
 }
