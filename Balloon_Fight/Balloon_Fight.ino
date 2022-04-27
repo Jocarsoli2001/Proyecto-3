@@ -38,7 +38,7 @@
 #define Jugador_1 PE_4
 #define Izquierda_J1 PA_7
 #define Derecha_J1 PC_7
-#define Gravedad 0.001
+#define Gravedad 0.0013
 #define Game PC_6
 #define Game_over PC_7
 #define Menu PC_5
@@ -109,9 +109,9 @@ int vector_y1 = 0;
   //***********************************************************************************************************************************
   // Declaración de objetos
   //***********************************************************************************************************************************
-  Obstaculo obs1 = {110, 100, 100, 20};                           // Se crea un objeto tipo obstáculo
-  Obstaculo obs2 = {0, 190, 70, 60};                              // Se crea un objeto tipo obstáculo
-  Obstaculo obs3 = {240, 190, 90, 60};                            // Se crea un objeto tipo obstáculo       
+  Obstaculo obs1 = {110, 96, 90, 25};                             // Se crea un objeto tipo obstáculo
+  Obstaculo obs2 = {0, 198, 70, 44};                              // Se crea un objeto tipo obstáculo
+  Obstaculo obs3 = {250, 198, 70, 44};                            // Se crea un objeto tipo obstáculo       
   Jugador J1 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0};     // Objeto tipo "Jugador" con todos los parámetros para el mismo
   Control CTRL1 = {0, 0, 0};                                      // Objeto tipo control que guarda todos los parámetros mandados por el control 1
   Control CTRL2 = {0, 0, 0};                                      // Objeto tipo control que guarda todos los parámetros mandados por el control 2
@@ -165,9 +165,14 @@ void setup() {
 
 
   FillRect(0, 0, 319, 239, 0x0000);
-  FillRect(obs1.Px + 4, obs1.Py + 4, obs1.Ancho - 6, obs1.Alto - 6, 0x2703);
-  FillRect(obs2.Px + 4, obs2.Py + 4, obs2.Ancho - 6, obs2.Alto - 7, 0x2703);
-  FillRect(obs3.Px + 7, obs3.Py + 4, obs3.Ancho - 6, obs3.Alto - 6, 0x2703);
+
+  //*************************************************************************************************************************************
+  // Primer Nivel
+  //*************************************************************************************************************************************
+  LCD_Bitmap(obs1.Px + 4, obs1.Py + 4, obs1.Ancho - 6, obs1.Alto - 6, Obstaculo_aire);
+  LCD_Bitmap(obs2.Px , obs2.Py + 4, obs2.Ancho - 6, obs2.Alto - 7, Obstaculo_esquina);
+  LCD_Bitmap(obs3.Px + 7, obs3.Py + 4, obs3.Ancho - 6, obs3.Alto - 6, Obstaculo_esquina);
+  LCD_Bitmap(64, 217, 193, 22, Agua);
 
 
 }
@@ -177,6 +182,7 @@ void setup() {
 void loop() {
   
   while(Game_Over == 0) {
+    
     //***********************************************************************************************************************************
     // Musica
     //***********************************************************************************************************************************
@@ -191,7 +197,7 @@ void loop() {
       Datos_control_binario = Serial2.read();
     }
 
-    
+    // Verificar cual es el botón presionado
     if((Datos_control_binario & 0b100000) == 0b100000){ CTRL1.Izquierda = 1; } else { CTRL1.Izquierda = 0; }
     if((Datos_control_binario & 0b010000) == 0b010000){ CTRL1.Derecha = 1; } else { CTRL1.Derecha = 0; }
     if((Datos_control_binario & 0b001000) == 0b001000){ CTRL1.Impulso = 1; } else { CTRL1.Impulso = 0; }
@@ -205,7 +211,7 @@ void loop() {
     J1 = Fisicas(J1, CTRL1.Impulso, CTRL1.Izquierda, CTRL1.Derecha);
 
     //***********************************************************************************************************************************
-    // Sprites
+    // Sprites y animaciones
     //***********************************************************************************************************************************
     /*
      * En este caso evaluamos el estado del jugador. Si este se encuentra sobre una superficie, si está parado sin moverse, genera una animación y si se mueve en el eje x, se genera una animación de  
@@ -238,6 +244,9 @@ void loop() {
         }
       }
     }
+
+    
+    
 
     // Si el jugador no está sobre una superficie, realizar la animación de estar volando.
     else{
@@ -291,7 +300,7 @@ Jugador Fisicas_y(Jugador Jug, int Boton_impulso){
     }
     if (Boton_impulso == 0 && Jug.impulso == 1 )                // Detectar cuando el botón de impulso se soltó
     {
-      (Jug.Vy) -= 0.2;                                            // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
+      (Jug.Vy) -= 0.15;                                            // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
       Jug.impulso = 0;                                            // Cambiar variable presionado_J1 como antirebote
     }
     
@@ -309,17 +318,14 @@ Jugador Fisicas_y(Jugador Jug, int Boton_impulso){
      * Para lograr que el sprite aparezca hacia arriba cuando este atraviesa la pared de abajo, se hizo que se fuera a la coordenada "y = 0" cuando la misma se volviera mayor a 240 (límite de pantalla).
      * Lo mismo sucede si supera la coordenada "y = 240", el sprite se mueve a la coordenada "y = 0".
      */
-    if((J1.Py) > 240){                                        
-      (Jug.Py) = 0;
+    if((Jug.Py) > 0){
+      (Jug.Py) += (Jug.Vy)*(t) + (0.5)*(Jug.Ay)*(t*t);            // Si el jugador se encuentra entre 0 y 240 en el eje y, la posición vertical está dada por esta fórmula 
     }
-    else if((Jug.Py) < 0){
-      (Jug.Py) = 240;
-      FillRect(0, 0, 319, 28, 0x0000);                            // Si el jugador sobrepasa la coordenada "x = 0", entonces hacer un rectángulo vertical para que no queden marcas del sprite.
+    else {
+      (Jug.Py) = 0.1;
+      (Jug.Vy) = -(0.87)*(Jug.Vy);
     }
-    else{
-      (Jug.Py) += (Jug.Vy)*(t) + (0.5)*(Jug.Ay)*(t*t);            // Si el jugador se encuentra entre 0 y 240 en el eje y, la posición vertical está dada por esta fórmula
-    }
-  
+    
     return(Jug);
 }
 
@@ -339,14 +345,14 @@ Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
       Jug.flip = 1;                                               // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
 
-    if((Jug.Vx)<=0.2 && (Jug.Vx)>=-0.2){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+    if((Jug.Vx)<=0.25 && (Jug.Vx)>=-0.25){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
       (Jug.Vx) += (Jug.Ax)*(t);
     }
-    else if((Jug.Vx)>0.2){
-      (Jug.Vx) = 0.2;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+    else if((Jug.Vx)>0.25){
+      (Jug.Vx) = 0.25;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
     }
-    else if(Jug.Vx<-0.2){
-      (Jug.Vx) = -0.2;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+    else if(Jug.Vx<-0.25){
+      (Jug.Vx) = -0.25;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
     }
 
     /* 
@@ -358,7 +364,7 @@ Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
     }
     else if((Jug.Px) < 0){
       (Jug.Px) = 320;
-      FillRect(0, 0, 19, 194, 0x0000);                            // Si el jugador sobrepasa la coordenada "x = 0", entonces hacer un rectángulo vertical para que no queden marcas del sprite.
+      FillRect(0, 0, 19, 200, 0x0000);                            // Si el jugador sobrepasa la coordenada "x = 0", entonces hacer un rectángulo vertical para que no queden marcas del sprite.
     }
     else{
       (Jug.Px) += (Jug.Vx)*(t) + (0.5)*(Jug.Ax)*(t*t);
@@ -421,7 +427,7 @@ Jugador Colisiones(Jugador Jug, Obstaculo obs){
         H_line(Jug.Px -2, Jug.Py +25, 20, 0x0000);
       
         // Alteración de la velocidad en x
-        Jug.Vx = ((-1)*(Jug.Vx));
+        Jug.Vx = ((-0.88)*(Jug.Vx));
       }
     
       // Si se encuentra en la región central derecha al obstáculo
@@ -433,8 +439,8 @@ Jugador Colisiones(Jugador Jug, Obstaculo obs){
         H_line(Jug.Px -2, Jug.Py +25, 20, 0x0000);
     
         // Alteración de la velocidad en x y la aceleración en x
-        Jug.Vx = ((-1)*(Jug.Vx));
-        Jug.Ax = ((-1)*(Jug.Ax));
+        Jug.Vx = ((-0.88)*(Jug.Vx));
+        Jug.Ax = ((-0.88)*(Jug.Ax));
       }
     
       // Si se encuentra en la región posterior al obstáculo
@@ -446,15 +452,15 @@ Jugador Colisiones(Jugador Jug, Obstaculo obs){
         H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000);
     
         // Alteración de la velocidad en y
-        Jug.Vy = ((-1)*(Jug.Vy));
+        Jug.Vy = ((-0.88)*(Jug.Vy));
       }
     
       // Si se encuentra en una esquina
       else if (variable_region == 5){
         
         // Alterar la velocidad  "y"
-        Jug.Vy = ((-1)*(1.2)*(Jug.Vy));
-        Jug.Vx = ((-1)*(1.2)*(Jug.Vx));;
+        Jug.Vy = ((-0.88)*(Jug.Vy));
+        Jug.Vx = ((-0.88)*(Jug.Vx));;
       }
     
       /*
@@ -462,8 +468,8 @@ Jugador Colisiones(Jugador Jug, Obstaculo obs){
        */
       else {
         if(Jug.parado == 0){
-          Jug.Vx = ((-1)*(Jug.Vx));
-          Jug.Vy = ((-1)*(Jug.Vy));
+          Jug.Vx = ((-0.88)*(Jug.Vx));
+          Jug.Vy = ((-0.88)*(Jug.Vy));
         }
         else{
           V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
