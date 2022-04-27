@@ -12,7 +12,7 @@
 #define fontXSizeNum 32
 #define fontYSizeNum 50
 
-#define fontdatatype const uint8_t
+#define fontdatatype ;const uint8_t
 #define fontdatatype16 const uint16_t
 
 // Font Size  : 8x12   1140 bytes

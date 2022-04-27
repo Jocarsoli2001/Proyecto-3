@@ -38,7 +38,7 @@
 #define Jugador_1 PE_4
 #define Izquierda_J1 PA_7
 #define Derecha_J1 PC_7
-#define Gravedad 0.0013
+#define Gravedad 0.0012
 #define Game PC_6
 #define Game_over PC_7
 #define Menu PC_5
@@ -104,6 +104,8 @@ int vector_y1 = 0;
   int anim2 = 0;
   int Datos_control_binario = 0b000000;
   int datos = 0;
+  int Muerto_J1 = 0;
+  int Muerto_J2 = 0;
   
 
   //***********************************************************************************************************************************
@@ -137,6 +139,7 @@ Jugador Colisiones(Jugador Jug, Obstaculo obs);
 Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der);
 Jugador Fisicas_y(Jugador Jug, int Boton_impulso);
 Jugador Fisicas(Jugador Jug, int Boton_impulso, int Boton_Iz, int Boton_Der);
+Jugador Fisica_muerte(Jugador Jug);
 
 
 //***************************************************************************************************************************************
@@ -186,7 +189,7 @@ void loop() {
     //***********************************************************************************************************************************
     // Musica
     //***********************************************************************************************************************************
-    digitalWrite(Game, LOW);
+    digitalWrite(Game, HIGH);
     
     //***********************************************************************************************************************************
     // Lectura de botones provenientes de los controles (ESP32)
@@ -206,9 +209,15 @@ void loop() {
     if((Datos_control_binario & 0b000001) == 0b000001){ CTRL2.Impulso = 1; } else { CTRL2.Impulso = 0; }
     
     //***********************************************************************************************************************************
-    // Implementación de físicas (ambos ejes)
+    // Implementación de físicas (ambos ejes) para ambos jugadores
     //***********************************************************************************************************************************
-    J1 = Fisicas(J1, CTRL1.Impulso, CTRL1.Izquierda, CTRL1.Derecha);
+    if(Muerto_J1 == 0){
+      J1 = Fisicas(J1, CTRL1.Impulso, CTRL1.Izquierda, CTRL1.Derecha);
+    }
+    else{
+      
+    }
+    
 
     //***********************************************************************************************************************************
     // Sprites y animaciones
@@ -245,9 +254,6 @@ void loop() {
       }
     }
 
-    
-    
-
     // Si el jugador no está sobre una superficie, realizar la animación de estar volando.
     else{
       if(J1.impulso == 1){
@@ -273,11 +279,33 @@ void loop() {
     else if((J1.Px + J1.Ancho) > (obs1.Px + obs1.Ancho + 18) && J1.Px < 319){
       J1 = Colisiones(J1, obs3);
     }
+
+    //***********************************************************************************************************************************
+    // Muerte
+    //***********************************************************************************************************************************
+    if((J1.Py + J1.Alto) > 217){
+      Muerto_J1 = 1;
+    }
+    
   }
 
 }
 
 //---------------------------------------------------- Subrutinas -----------------------------------------------------------------------
+//***************************************************************************************************************************************
+// Función que generar físicas cuando el jugador murió
+//***************************************************************************************************************************************
+//Jugador Fisica_muerte(Jugador Jug){
+//  // Se genera una gravedad de 0.001 y velocidad inicial de -0.2
+//  Jug.Ay = Gravedad;
+//  Jug.Vy = -0.4;
+//  
+//  (Jug.Py) += (Jug.Vy)*(t) + (0.5)*(Jug.Ay)*(t*t); 
+//  
+//
+//
+//  return(Jug);
+//}
 
 //***************************************************************************************************************************************
 // Función que genera el conjunto de físicas para 1 solo jugador
@@ -300,7 +328,7 @@ Jugador Fisicas_y(Jugador Jug, int Boton_impulso){
     }
     if (Boton_impulso == 0 && Jug.impulso == 1 )                // Detectar cuando el botón de impulso se soltó
     {
-      (Jug.Vy) -= 0.15;                                            // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
+      (Jug.Vy) -= 0.4;                                            // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
       Jug.impulso = 0;                                            // Cambiar variable presionado_J1 como antirebote
     }
     
