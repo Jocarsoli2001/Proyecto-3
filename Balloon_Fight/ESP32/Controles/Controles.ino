@@ -1,5 +1,3 @@
-#include "pitches.h"
-#include <Arduino.h>
 
 //-------------------------------- Definición de pines --------------------------------
 
@@ -14,6 +12,8 @@
 #define IMP_J2 21
 
 #define Buzzer_pin 22
+#define ledChannel 0
+#define resolucion 8
 
 //------------------------------------- Variables -------------------------------------
 int I_J1 = 0;
@@ -38,7 +38,6 @@ void Retorno_botones(int boton);
 // Setup
 //*************************************************************************************
 void setup() {
-  Serial.begin(115200);
   Serial2.begin(115200);                                            // Inicialización del puerto serial 2
 
   pinMode(IZ_J1, INPUT);                                            // Pin 15 como input
@@ -47,7 +46,6 @@ void setup() {
   pinMode(IZ_J2, INPUT);                                            // Pin 18 como input
   pinMode(DE_J2, INPUT);                                            // Pin 19 como input
   pinMode(IMP_J2, INPUT);                                           // Pin 21 como input
-  
 }
 
 
@@ -114,9 +112,4 @@ void loop() {
   }
 
   Serial2.write(dato_enviado);
-
-  
-  // ---------------------------------- Música ---------------------------------------
-  
-  
 }

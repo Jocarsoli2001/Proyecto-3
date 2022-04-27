@@ -144,6 +144,7 @@ void setup() {
   
   SysCtlClockSet(SYSCTL_SYSDIV_2_5 | SYSCTL_USE_PLL | SYSCTL_OSC_MAIN | SYSCTL_XTAL_16MHZ);
   Serial.begin(115200);
+  Serial3.begin(9600);
   Serial2.begin(115200);
   
   GPIOPadConfigSet(GPIO_PORTB_BASE, 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7, GPIO_STRENGTH_8MA, GPIO_PIN_TYPE_STD_WPU);
@@ -170,14 +171,24 @@ void setup() {
 void loop() {
   
   while(Game_Over == 0) {
-
+    //***********************************************************************************************************************************
+    // Musica
+    //***********************************************************************************************************************************
+    if(Serial3.available()){
+      Serial3.write(4);
+    }
+    
+    
     //***********************************************************************************************************************************
     // Lectura de botones provenientes de los controles (ESP32)
     //***********************************************************************************************************************************
     while(Serial2.available()){
+
+      // Guardar las variables que el control envia
       Datos_control_binario = Serial2.read();
     }
 
+    
     if((Datos_control_binario & 0b100000) == 0b100000){ CTRL1.Izquierda = 1; } else { CTRL1.Izquierda = 0; }
     if((Datos_control_binario & 0b010000) == 0b010000){ CTRL1.Derecha = 1; } else { CTRL1.Derecha = 0; }
     if((Datos_control_binario & 0b001000) == 0b001000){ CTRL1.Impulso = 1; } else { CTRL1.Impulso = 0; }
@@ -250,7 +261,6 @@ void loop() {
     else if((J1.Px + J1.Ancho) > (obs1.Px + obs1.Ancho + 18) && J1.Px < 319){
       J1 = Colisiones(J1, obs3);
     }
-    
   }
 
 }
