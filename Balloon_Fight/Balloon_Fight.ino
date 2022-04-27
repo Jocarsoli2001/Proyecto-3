@@ -39,7 +39,9 @@
 #define Izquierda_J1 PA_7
 #define Derecha_J1 PC_7
 #define Gravedad 0.001
-
+#define Game PC_6
+#define Game_over PC_7
+#define Menu PC_5
 
 //***************************************************************************************************************************************
 // Structs
@@ -155,7 +157,11 @@ void setup() {
 
   pinMode(Jugador_1, INPUT);
   pinMode(Izquierda_J1, INPUT);
-  pinMode(Derecha_J1, INPUT);                             
+  pinMode(Derecha_J1, INPUT);
+
+  pinMode(Game, OUTPUT);
+  pinMode(Game_over, OUTPUT);
+  pinMode(Menu, OUTPUT);
 
 
   FillRect(0, 0, 319, 239, 0x0000);
@@ -174,10 +180,7 @@ void loop() {
     //***********************************************************************************************************************************
     // Musica
     //***********************************************************************************************************************************
-    if(Serial3.available()){
-      Serial3.write(4);
-    }
-    
+    digitalWrite(Game, LOW);
     
     //***********************************************************************************************************************************
     // Lectura de botones provenientes de los controles (ESP32)

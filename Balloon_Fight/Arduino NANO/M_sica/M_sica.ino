@@ -8,12 +8,25 @@
 //
 // CC0
 
+#define Game 5
+#define Game_over 6
+#define Menu 11
+
 // Pin del buzzer, el cual sacará la señal PWM.
 int tonePin = 3;
 int dato = 0;
+int Estado_Game = 0;
+int Estado_Game_over = 0;
+int Estado_Menu = 0;
+bool Verdad = true;
 
 void setup() {
   Serial.begin(9600);
+  
+  pinMode(Game, INPUT);
+  pinMode(Game_over, INPUT);
+  pinMode(Menu, INPUT);
+  pinMode(9, OUTPUT);
 }
 
 void Main_theme() {
@@ -305,14 +318,6 @@ void Main_theme() {
 
 void loop() {
     // Tocar tema principal
-    while(Serial.available()){
-      dato = Serial.read();
-    }
-
-    Serial.println(dato);
-    
-    if(dato == 0){
-      Main_theme();  
-    }
+    Main_theme();
     
 }
