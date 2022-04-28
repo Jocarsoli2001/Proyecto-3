@@ -74,6 +74,12 @@ typedef struct{
 Jugador;
 
 typedef struct{
+  Jugador J1;
+  Jugador J2;
+}
+Jugadores;
+
+typedef struct{
   int Px;
   int Py;
   int Ancho;
@@ -113,6 +119,7 @@ int vector_y1 = 0;
   int Suma_vel = 0;
   int Menu_activo = 1;
   int agua = 0;
+  float distancia_centros = 0;
   
 
   //***********************************************************************************************************************************
@@ -123,6 +130,7 @@ int vector_y1 = 0;
   Obstaculo obs3 = {253, 198, 66, 44};                                    // Se crea un objeto tipo obstáculo       
   Jugador J1 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0, 2, 0};       // Objeto tipo "Jugador" con todos los parámetros para el mismo
   Jugador J2 = {257, 100, 16, 24, 0, 0, 0, Gravedad, 1, 0, 0, 2, 0};      // Objeto tipo "Jugador" con todos los parámetros para el mismo
+  Jugadores J = {J1, J2};
   Control CTRL1 = {0, 0, 0};                                              // Objeto tipo control que guarda todos los parámetros mandados por el control 1
   Control CTRL2 = {0, 0, 0};                                              // Objeto tipo control que guarda todos los parámetros mandados por el control 2
 
@@ -150,6 +158,7 @@ Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der);
 Jugador Fisicas_y(Jugador Jug, int Boton_impulso);
 Jugador Fisicas(Jugador Jug, int Boton_impulso, int Boton_Iz, int Boton_Der);
 Jugador Fisica_muerte(Jugador Jug);
+Jugadores Colisiones_JvJ(Jugador Jug, Jugador Jug2);
 void Write_Text(String Texto, int CoordX, int CoordY, int ColorTexto, int ColorFondo);
 void LCD_TextCS(int x, int y, int width, int height, unsigned char bitmap[],int columns, int index, char flip, char offset, int ColorTexto, int ColorFondo);
 void Write_Num(int Numero, byte NoDigitos, int CoordX, int CoordY, int ColorTexto, int ColorFondo);
@@ -267,7 +276,7 @@ void loop() {
     //***********************************************************************************************************************************
     // Musica
     //***********************************************************************************************************************************
-    digitalWrite(Game, LOW);
+    digitalWrite(Game, HIGH);
     
     //***********************************************************************************************************************************
     // Lectura de botones provenientes de los controles (ESP32)
@@ -278,8 +287,8 @@ void loop() {
       Datos_control_binario = Serial2.read();
     }
 
-    Serial.print(" Datos control: ");
-    Serial.println(Datos_control_binario);
+    //Serial.print(" Datos control: ");
+    //Serial.println(Datos_control_binario);
     
     // Verificar cual es el botón presionado
     if((Datos_control_binario & 0b100000) == 0b100000){ CTRL1.Izquierda = 1; } else { CTRL1.Izquierda = 0; }
@@ -291,14 +300,18 @@ void loop() {
 
     
     //***********************************************************************************************************************************
-    // Implementación de físicas (ambos ejes) para ambos jugadores. Esto depende de si el jugador está muerto o no
+    // Implementación de físicas (ambos ejes) para ambos jugadores (si ninguno ha muerto)
     //***********************************************************************************************************************************
     if(J1.Muerto == 0 && J2.Muerto == 0){
       J1 = Fisicas(J1, CTRL1.Impulso, CTRL1.Izquierda, CTRL1.Derecha);
       J2 = Fisicas(J2, CTRL2.Impulso, CTRL2.Izquierda, CTRL2.Derecha);
     }
+
+    //***********************************************************************************************************************************
+    // Implementación de físicas (ambos ejes) para ambos jugadores (si algún jugador ha muerto)
+    //***********************************************************************************************************************************
     else{
-      if(J1.Muerto == 1){ 
+      if(J1.Muerto == 1 || J1.Num_globos == 0){ 
 
         // Impulso inicial para jugador 1
         if(Suma_vel == 0){                                                      
@@ -306,9 +319,14 @@ void loop() {
           J1.Py += 8;
           Suma_vel = 1;
         }
-      
+
+        // Generar físicas cuando el jugador muere
         J1 = Fisica_muerte(J1);
 
+        /*
+         * NOTA: Se mueve al jugador al momento de morir, pues el sprite de muerte es menor al ancho y alto del jugador normal, por lo que es necesario moverlo un poco para que el antiguo
+         * sprite del jugador normal, deje de verse y la animación se vea muy bien
+         */
         if((J1.Py + J1.Alto - 8) > 250){
           J1.Py = 240;
           J1.Muerto = 5;
@@ -317,12 +335,13 @@ void loop() {
             LCD_Bitmap(61 + 10*e, 217, 10, 22, Agua);
           }
 
+          // Cuando jugador 1 muere, colocar Game_Over en 1 y realizar un break para que salga del loop de forma inmediata.
           Game_Over = 1;
           FillRect(0, 0, 319, 239, 0x0000);
           break;
         }
       }
-      else{
+      else if(J2.Muerto == 1 || J2.Num_globos == 0){
         
         // Impulso inicial para jugador 2
         if(Suma_vel == 0){
@@ -330,7 +349,8 @@ void loop() {
           J2.Py += 8;
           Suma_vel = 1;
         }
-        
+
+        // Generar físicas cuando el jugador muere
         J2 = Fisica_muerte(J2);
   
         if((J2.Py + J2.Alto - 8) > 250){
@@ -341,6 +361,7 @@ void loop() {
             LCD_Bitmap(61 + 10*o, 217, 10, 22, Agua);
           }
 
+          // Cuando jugador 1 muere, colocar Game_Over en 1 y realizar un break para que salga del loop de forma inmediata.
           Game_Over = 1;
           FillRect(0, 0, 319, 239, 0x0000);
           break;
@@ -353,7 +374,8 @@ void loop() {
     //***********************************************************************************************************************************
     /*
      * En este caso evaluamos el estado del jugador. Si este se encuentra sobre una superficie, si está parado sin moverse, genera una animación y si se mueve en el eje x, se genera una animación de  
-     * caminata para que el jugador tenga movilidad. Ahora esto fue modulado para que 2 jugadores pudieran tener las mismas animaciones
+     * caminata para que el jugador tenga movilidad. Ahora esto fue modulado para que 2 jugadores pudieran tener las mismas animaciones. Incluso, la subrutina permite evaluar las animaciones si el 
+     * número de globos ha disminuido. 
      */
     Animaciones(J1, 1);
     Animaciones(J2, 2);
@@ -364,7 +386,17 @@ void loop() {
     /*
      * Se dividió en diferentes regiones la pantalla (en eje x) para que por región realizara las colisiones con el obstáculo que se encuentra en esa misma región. Esto se realizó para ambos jugadores. 
      */
-
+    // Distancia desde centros
+    distancia_centros = sqrt(pow((J2.Py + J2.Alto/2) - (J1.Py + J1.Alto/2), 2) + pow((J2.Px + J2.Ancho/2) - (J1.Px + J1.Ancho/2), 2));
+    //Serial.print("DISTANCIA: ");
+    //Serial.println(distancia_centros);
+    
+    if(distancia_centros < 35){
+      J = Colisiones_JvJ(J1, J2);
+      J1 = J.J1;
+      J2 = J.J2;
+    }
+    
     // Jugador 1 colisiones
     if((J1.Px + J1.Ancho) > 0 && J1.Px < (obs2.Px + obs2.Ancho + 18)){
       J1 = Colisiones(J1, obs2);
@@ -390,11 +422,25 @@ void loop() {
     //***********************************************************************************************************************************
     // Muerte
     //***********************************************************************************************************************************
+    /*
+     * Se colocó este rango de números para que si el jugador toca el agua, este morirá
+     */
     if((J1.Py + J1.Alto) > 217){
       J1.Muerto = 1;
     }
 
     if((J2.Py + J2.Alto) > 217){
+      J2.Muerto = 1;
+    }
+
+    /*
+     * También se agregaron condiciones para cuando el jugador pierda todos sus globos, automáticamente 
+     */
+    if(J1.Num_globos == 0){
+      J1.Muerto = 1;
+    }
+
+    if(J2.Num_globos == 0){
       J2.Muerto = 1;
     }
     
@@ -404,11 +450,12 @@ void loop() {
   // Entrar en pantalla de ganadores
   //*************************************************************************************************************************************
   while(Game_Over == 1){
+    digitalWrite(Game, LOW);
     cont_anim1 += 1;
 
-    /*
-     * Agua para ambos escenarios de ganadores. Se utiliza la variable agua para pintar el agua una sola vez
-     */
+    //***********************************************************************************************************************************
+    // Generación de agua para pantalla de ganadores
+    //***********************************************************************************************************************************
     if(agua == 0){
       for(int l = 0; l < 60; l++){
         LCD_Bitmap(0 + 10*l, 217, 10, 22, Agua);
@@ -426,7 +473,9 @@ void loop() {
     }
     
 
-    // Si el jugador 1 sigue vivo, pero el jugador 2 ya pasó por la animación de muerte, entonces generar una pantalla de 
+    //***********************************************************************************************************************************
+    // Pantalla ganadora para Jugador 1
+    //***********************************************************************************************************************************
     if(J1.Muerto == 0 && J2.Muerto == 5){
       for(int x = 0; x < 6; x++){
         LCD_Bitmap(70 + 6*x, 125, 6, 19, Obstaculo_aire);                
@@ -440,6 +489,9 @@ void loop() {
       Write_Text("PLAYER ONE WINS!", 130, 110, 0xffff, 0x0000);
     }
 
+    //***********************************************************************************************************************************
+    // Pantalla ganadora para Jugador 2
+    //***********************************************************************************************************************************
     if(J1.Muerto == 5 && J2.Muerto == 0){
       for(int x = 0; x < 6; x++){
         LCD_Bitmap(70 + 6*x, 125, 6, 19, Obstaculo_aire);                
@@ -457,6 +509,153 @@ void loop() {
 }
 
 //---------------------------------------------------- Subrutinas -----------------------------------------------------------------------
+//***************************************************************************************************************************************
+// Función para generar reacciones para colisiones
+//***************************************************************************************************************************************
+Jugadores Colisiones_JvJ(Jugador Jug, Jugador Jug2){
+  
+  // Se chequea el overlap entre el jugador indicado y el obstáculo indicado
+  int overlap = Check_overlap(Jug2.Px, Jug2.Py, Jug.Px, Jug.Py, Jug2.Ancho, Jug2.Alto, Jug.Alto, Jug.Ancho);
+  
+  // Si existe overlap
+  if(overlap == 1){ 
+
+      // Chequeo de que region es en la que se encuentra
+      int variable_region = Regiones(Jug.Px, Jug.Py, Jug.Alto, Jug.Ancho, Jug2.Px, Jug2.Py, Jug2.Ancho, Jug2.Alto);
+
+      Serial.print("REGION: ");
+      Serial.println(variable_region);
+       
+      // Si se encuentra en la región superior al obstáculo
+      if(variable_region == 1){ 
+            
+        // Pintar borde superior, izquierdo y derecho.
+        H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000); 
+        V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
+        V_line(Jug.Px +18, Jug.Py, 24, 0x0000);
+        V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
+        V_line(Jug.Px -2, Jug.Py, 24, 0x0000);
+    
+        // Alteración a velocidades y aceleración                                   
+        Jug.Vy = (-1.2*Jug.Vy);
+        Jug.Ay = (-Jug.Ay);                                  // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
+        Jug2.Vy = (-Jug2.Vy);
+        Jug2.Ay = (-Jug2.Ay);                                  // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
+        Jug2.Num_globos -= 1;
+
+        LCD_SpriteCS(Jug2.Px, Jug2.Py, Jug2.Ancho, Jug2.Alto, Balloon_boy_globo_R, 1, 1, Jug2.flip, 0, 1, 0x21dd, 0x2CC5);
+        delay(200);
+      }
+    
+      // Si se encuentra en la región central izquierda al obstáculo
+      else if(variable_region == 2){
+    
+        // Pintar borde superior, izquierdo y posterior.
+        V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
+        H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000);
+        H_line(Jug.Px -2, Jug.Py +25, 20, 0x0000);
+      
+        // Alteración de la velocidad en x
+        Jug.Vx = (-(Jug.Vx));
+        Jug2.Vx = (-(Jug2.Vx));
+        Jug.Ax = ((-0.88)*(Jug.Ax));
+        Jug2.Ax = ((-0.88)*(Jug2.Ax));
+      }
+    
+      // Si se encuentra en la región central derecha al obstáculo
+      else if(variable_region == 3){
+    
+        // Pintar borde inferior, derecho y superior.
+        V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
+        H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000);
+        H_line(Jug.Px -2, Jug.Py +25, 20, 0x0000);
+    
+        // Alteración de la velocidad en x y la aceleración en x
+        Jug.Vx = ((-0.88)*(Jug.Vx));
+        Jug2.Vx = ((-0.88)*(Jug2.Vx));
+        Jug.Ax = ((-0.88)*(Jug.Ax));
+        Jug2.Ax = ((-0.88)*(Jug2.Ax));
+      }
+    
+      // Si se encuentra en la región posterior al obstáculo
+      else if(variable_region == 4){
+    
+        // Pintar borde inferior, izquierdo y derecho.
+        V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
+        V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
+        H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000);
+    
+        // Alteración a velocidades y aceleración                                   
+        Jug.Vy = ((-0.88)*(Jug.Vy));
+        Jug.Ay = ((-0.88)*(Jug.Ay));                                  
+        Jug2.Vy = ((-0.88)*(Jug2.Vy));
+        Jug2.Ay = ((-0.88)*(Jug2.Ay));                                  
+        Jug.Num_globos -= 1;
+
+        LCD_Sprite(Jug.Px, Jug.Py, Jug.Ancho, Jug.Alto, Balloon_boy_globo_R, 1, 1, Jug.flip, 0);
+        delay(200);
+      }
+    
+      // Si se encuentra en una esquina
+      else if (variable_region == 5){
+        
+        // Alterar la velocidad  "y"
+        Jug.Vy = ((-0.88)*(Jug.Vy));
+        Jug.Ay = ((-0.88)*(Jug.Ay));                                  
+        Jug2.Vy = ((-0.88)*(Jug2.Vy));
+        Jug2.Ay = ((-0.88)*(Jug2.Ay));
+        Jug.Vx = ((-0.88)*(Jug.Vx));
+        Jug2.Vx = ((-0.88)*(Jug2.Vx));
+        Jug.Ax = ((-0.88)*(Jug.Ax));
+        Jug2.Ax = ((-0.88)*(Jug2.Ax));
+      }
+    
+      /*
+       * Para permitir que el jugador pueda caer libremente cuando se encuentra en una esquina, se chequea si está parado, de lo contrario, las esquinas repelen al jugador.
+       */
+      else {
+        if(Jug.parado == 0){
+          Jug2.Vx = ((-Jug2.Vx));
+          Jug2.Vy = ((-Jug2.Vy));
+          Jug.Vx = ((-Jug.Vx));
+          Jug.Vy = ((-Jug.Vy));
+        }
+        else{
+          V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
+          V_line(Jug.Px +18, Jug.Py, 24, 0x0000);
+          V_line(Jug.Px +19, Jug.Py, 24, 0x0000);
+          V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
+          V_line(Jug.Px -2, Jug.Py, 24, 0x0000);
+          V_line(Jug.Px -3, Jug.Py, 24, 0x0000);
+        }
+     }
+  }
+  // Si no existe overlap, continuar con físicas de caida libre normal
+  else{
+
+    // Pintar todos los bordes exteriores para no dejar rastro en la LCD
+    V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
+    V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
+    H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000);
+    H_line(Jug.Px -2, Jug.Py -2, 20, 0x0000);
+    H_line(Jug.Px -2, Jug.Py +25, 20, 0x0000);
+    H_line(Jug.Px -2, Jug.Py +26, 20, 0x0000);
+
+    // Dejar la gravedad constante y la variable de si está parado, en 0
+    Jug.Ay = Gravedad;
+    Jug2.Ay = Gravedad;
+    Jug.parado = 0;
+    Jug2.parado = 0;  
+  }
+
+  Jugadores Players;
+
+  Players.J1 = Jug;
+  Players.J2 = Jug2;
+  
+  return(Players);
+}
+
 //***************************************************************************************************************************************
 // Función que generar físicas cuando el jugador murió
 //***************************************************************************************************************************************
@@ -553,7 +752,117 @@ void Animaciones(Jugador Jug, int Num_Jugador){
       }
     }
   }
-}    
+
+  // Si el número de globos es 1, entonces hacer animaciones con 1 globo
+  else if(Jug.Num_globos == 1){
+    
+    // Si el jugador se encuentra sobre una superficie:
+    if(Jug.parado == 1 && Jug.Muerto == 0){
+
+      // Si la velocidad en x se aproxima a 0:
+      if(abs(Jug.Vx) < 0.001){
+
+        // Generar animación para estar parado
+        anim1 = (cont_anim1 / 35) % 3;
+
+        /*
+         * Si el jugador es el 1, se genera el sprite sin cambio de color, en cambio, si el jugador es el 2, se genera el mismo sprite, pero las partes azules las torna verdes. De esta forma se pueden diferenciar 
+         * a los dos jugadores
+         */
+        if(Num_Jugador == 1){
+          LCD_Sprite(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy_parado_1G, 3, anim1, Jug.flip, 0);
+        }
+        else{
+          LCD_SpriteCS(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy_parado_1G, 3, anim1, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+        }
+        
+      }
+
+      // Si la velocidad en x es mayor o menor a 0:
+      else{
+
+        // Generar animación para caminar
+        anim2 = (cont_anim1 / 20) % 4;
+        
+        if(Num_Jugador == 1){
+          LCD_Sprite(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy_caminando_1G, 4, anim2, Jug.flip, 0);
+        }
+        else{
+          LCD_SpriteCS(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy_caminando_1G, 4, anim2, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+        }
+
+        // Si la velocidad es negativa, dibujar franjas para evitar ver desfase.
+        if(Jug.Vx < 0){
+          V_line(Jug.Px +15, Jug.Py, 24, 0x0000);
+          V_line(Jug.Px +16, Jug.Py, 24, 0x0000);
+        }
+      }
+    }
+
+    // Si el jugador muere, entonces realizar la animación correspondiente
+    else if(Jug.Muerto == 1){
+      
+      cont_anim2 += 1;
+      anim3 = (cont_anim2/68) % 4;
+      
+      if(Num_Jugador == 1){
+        LCD_Sprite(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, anim3, Jug.flip, 0);
+      }
+      else{
+        LCD_SpriteCS(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, anim3, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+      }
+      
+      V_line(Jug.Px -1, Jug.Py, 12, 0x0000);
+      V_line(Jug.Px +15, Jug.Py, 12, 0x0000);
+      H_line(Jug.Px -2, Jug.Py -1, 19, 0x0000);
+      H_line(Jug.Px -2, Jug.Py +12, 19, 0x0000);
+    }
+    
+    // Si el jugador no está sobre una superficie, realizar la animación de estar volando.
+    else if(Jug.Muerto != 5){
+      if(Jug.impulso == 1){
+
+        // Si es el primer jugador, realizar la animación sin cambio de color
+        if(Num_Jugador == 1){
+          LCD_Sprite(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy_1G, 2, 1, Jug.flip, 0);
+        }
+
+        // Si es el segundo jugador, realizar la animación con cambio de color
+        else{
+          LCD_SpriteCS(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy_1G, 2, 1, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+        }     
+      }
+      else{
+
+        // Si es el primer jugador, realizar la animación sin cambio de color
+        if(Num_Jugador == 1){
+          LCD_Sprite(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy_1G, 2, 2, Jug.flip, 0);
+        }
+
+        // Si es el segundo jugador, realizar la animación con cambio de color
+        else{
+          LCD_SpriteCS(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy_1G, 2, 2, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+        }
+      }
+    }
+  }
+
+  // Si el jugador se queda sin globos, indicar que el jugador murió
+  else{
+    if(Num_Jugador == 1){
+      LCD_Sprite(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, 1, Jug.flip, 0);
+    }
+    else{
+      LCD_SpriteCS(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, 1, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+    }
+    
+    V_line(Jug.Px -1, Jug.Py, 12, 0x0000);
+    V_line(Jug.Px +15, Jug.Py, 12, 0x0000);
+    H_line(Jug.Px -2, Jug.Py -1, 19, 0x0000);
+    H_line(Jug.Px -2, Jug.Py +12, 19, 0x0000); 
+  }
+}
+    
     
 //***************************************************************************************************************************************
 // Función que generar físicas cuando el jugador murió
