@@ -9,9 +9,8 @@
 // Jugador 2
 #define IZ_J2 18
 #define DE_J2 19
-#define IMP_J2 21
+#define IMP_J2 22
 
-#define Buzzer_pin 22
 #define ledChannel 0
 #define resolucion 8
 
@@ -45,7 +44,7 @@ void setup() {
   pinMode(IMP_J1, INPUT);                                           // Pin 5 como input
   pinMode(IZ_J2, INPUT);                                            // Pin 18 como input
   pinMode(DE_J2, INPUT);                                            // Pin 19 como input
-  pinMode(IMP_J2, INPUT);                                           // Pin 21 como input
+  pinMode(IMP_J2, INPUT);                                           // Pin 22 como input
 }
 
 

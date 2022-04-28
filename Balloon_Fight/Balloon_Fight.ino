@@ -39,7 +39,7 @@ File Archivo;
 #define LCD_RD PE_1
 #define Izquierda_J1 PA_7
 #define Derecha_J1 PC_7
-#define Gravedad 0.002
+#define Gravedad 0.0026
 #define Game PC_6
 #define Game_over PC_7
 #define Menu PC_5
@@ -112,6 +112,7 @@ int vector_y1 = 0;
   int datos = 0;
   int Suma_vel = 0;
   int Menu_activo = 1;
+  int agua = 0;
   
 
   //***********************************************************************************************************************************
@@ -194,7 +195,7 @@ void setup() {
     
     // Se realiza la subrutina LCD_BitmapSD, para que se extraiga el título y el símbolo de globo de ahí 
     LCD_BitmapSD(50, 35, 224, 104, "Titulo.txt");
-    LCD_BitmapSD(105, 170, 8, 8, "Globito.txt");
+    LCD_BitmapSD(100, 165, 16, 16, "Globito.txt");
     
     // Escritura del texto "Press start" y las credenciales a Nintendo 
     Write_Text("PRESS START", 120, 170, 0xffff, 0x0000);
@@ -257,7 +258,10 @@ void loop() {
 
   // Se inicializa al jugador como vivo
   J1.Muerto = 0;
-  
+
+  //***********************************************************************************************************************************
+  // Loop mientras ningún jugador ha muerto
+  //***********************************************************************************************************************************
   while(Game_Over == 0) {
     
     //***********************************************************************************************************************************
@@ -274,6 +278,9 @@ void loop() {
       Datos_control_binario = Serial2.read();
     }
 
+    Serial.print(" Datos control: ");
+    Serial.println(Datos_control_binario);
+    
     // Verificar cual es el botón presionado
     if((Datos_control_binario & 0b100000) == 0b100000){ CTRL1.Izquierda = 1; } else { CTRL1.Izquierda = 0; }
     if((Datos_control_binario & 0b010000) == 0b010000){ CTRL1.Derecha = 1; } else { CTRL1.Derecha = 0; }
@@ -281,6 +288,7 @@ void loop() {
     if((Datos_control_binario & 0b000100) == 0b000100){ CTRL2.Izquierda = 1; } else { CTRL2.Izquierda = 0; }
     if((Datos_control_binario & 0b000010) == 0b000010){ CTRL2.Derecha = 1; } else { CTRL2.Derecha = 0; }
     if((Datos_control_binario & 0b000001) == 0b000001){ CTRL2.Impulso = 1; } else { CTRL2.Impulso = 0; }
+
     
     //***********************************************************************************************************************************
     // Implementación de físicas (ambos ejes) para ambos jugadores. Esto depende de si el jugador está muerto o no
@@ -290,10 +298,10 @@ void loop() {
       J2 = Fisicas(J2, CTRL2.Impulso, CTRL2.Izquierda, CTRL2.Derecha);
     }
     else{
-      if(J1.Muerto == 1){
+      if(J1.Muerto == 1){ 
 
         // Impulso inicial para jugador 1
-        if(Suma_vel == 0){
+        if(Suma_vel == 0){                                                      
           J1.Vy = -0.3;
           J1.Py += 8;
           Suma_vel = 1;
@@ -308,6 +316,10 @@ void loop() {
           for(int e = 0; e < 20; e++){
             LCD_Bitmap(61 + 10*e, 217, 10, 22, Agua);
           }
+
+          Game_Over = 1;
+          FillRect(0, 0, 319, 239, 0x0000);
+          break;
         }
       }
       else{
@@ -328,6 +340,10 @@ void loop() {
           for(int o = 0; o < 20; o++){
             LCD_Bitmap(61 + 10*o, 217, 10, 22, Agua);
           }
+
+          Game_Over = 1;
+          FillRect(0, 0, 319, 239, 0x0000);
+          break;
         }
       }
     }
@@ -349,7 +365,7 @@ void loop() {
      * Se dividió en diferentes regiones la pantalla (en eje x) para que por región realizara las colisiones con el obstáculo que se encuentra en esa misma región. Esto se realizó para ambos jugadores. 
      */
 
-    // Jugador 1
+    // Jugador 1 colisiones
     if((J1.Px + J1.Ancho) > 0 && J1.Px < (obs2.Px + obs2.Ancho + 18)){
       J1 = Colisiones(J1, obs2);
     }
@@ -360,7 +376,7 @@ void loop() {
       J1 = Colisiones(J1, obs3);
     }
 
-    // Jugador 2
+    // Jugador 2 colisiones
     if((J2.Px + J2.Ancho) > 0 && J2.Px < (obs2.Px + obs2.Ancho + 18)){
       J2 = Colisiones(J2, obs2);
     }
@@ -382,6 +398,60 @@ void loop() {
       J2.Muerto = 1;
     }
     
+  }
+
+  //*************************************************************************************************************************************
+  // Entrar en pantalla de ganadores
+  //*************************************************************************************************************************************
+  while(Game_Over == 1){
+    cont_anim1 += 1;
+
+    /*
+     * Agua para ambos escenarios de ganadores. Se utiliza la variable agua para pintar el agua una sola vez
+     */
+    if(agua == 0){
+      for(int l = 0; l < 60; l++){
+        LCD_Bitmap(0 + 10*l, 217, 10, 22, Agua);
+      }
+      
+      for(int p = 0; p < 60; p++){
+        LCD_Bitmap(0 + 10*p, 207, 10, 22, Agua);
+      }
+      
+      for(int c = 0; c < 60; c++){
+        LCD_Bitmap(0 + 10*c, 197, 10, 22, Agua);
+      }
+
+      agua = 1;
+    }
+    
+
+    // Si el jugador 1 sigue vivo, pero el jugador 2 ya pasó por la animación de muerte, entonces generar una pantalla de 
+    if(J1.Muerto == 0 && J2.Muerto == 5){
+      for(int x = 0; x < 6; x++){
+        LCD_Bitmap(70 + 6*x, 125, 6, 19, Obstaculo_aire);                
+      }
+
+      /*
+       * Se dibuja al jugador ganador (J1)
+       */
+      anim1 = (cont_anim1 / 55) % 3;
+      LCD_Sprite(80, 100, J1.Ancho, J1.Alto, Balloon_boy_parado, 3, anim1, 1, 0);
+      Write_Text("PLAYER ONE WINS!", 130, 110, 0xffff, 0x0000);
+    }
+
+    if(J1.Muerto == 5 && J2.Muerto == 0){
+      for(int x = 0; x < 6; x++){
+        LCD_Bitmap(70 + 6*x, 125, 6, 19, Obstaculo_aire);                
+      }
+
+      /*
+       * Se dibuja al jugador ganador (J2)
+       */
+      anim1 = (cont_anim1 / 55) % 3;
+      LCD_SpriteCS(80, 100, J2.Ancho, J2.Alto, Balloon_boy_parado, 3, anim1, 1, 0, 1, 0x21dd, 0x2CC5);
+      Write_Text("PLAYER TWO WINS!", 130, 110, 0xffff, 0x0000);
+    }
   }
 
 }
@@ -458,17 +528,25 @@ void Animaciones(Jugador Jug, int Num_Jugador){
     // Si el jugador no está sobre una superficie, realizar la animación de estar volando.
     else if(Jug.Muerto != 5){
       if(Jug.impulso == 1){
+
+        // Si es el primer jugador, realizar la animación sin cambio de color
         if(Num_Jugador == 1){
           LCD_Sprite(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy, 5, 2, Jug.flip, 0);
         }
+
+        // Si es el segundo jugador, realizar la animación con cambio de color
         else{
           LCD_SpriteCS(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy, 5, 2, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
         }     
       }
       else{
+
+        // Si es el primer jugador, realizar la animación sin cambio de color
         if(Num_Jugador == 1){
           LCD_Sprite(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy, 5, 3, Jug.flip, 0);
         }
+
+        // Si es el segundo jugador, realizar la animación con cambio de color
         else{
           LCD_SpriteCS(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy, 5, 3, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
         }
@@ -555,13 +633,13 @@ Jugador Fisicas_y(Jugador Jug, int Boton_impulso){
 Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
     if(Boton_Iz == 1)                                             // En el eje x, cuando se presiona el botón para mover a la izquierda, se agrega una velocidad en el eje x-, por lo va a la izquierda
     {
-      (Jug.Vx) -= 0.003;                                                 
-      (Jug.Ax) = -0.001;                                         // Se genera una aceleración para un giro más suave
+      (Jug.Vx) -= 0.004;                                                 
+      (Jug.Ax) = -0.006;                                         // Se genera una aceleración para un giro más suave
       Jug.flip = 0;                                               // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
     if(Boton_Der == 1){                                           // En el eje x, cuando se presiona el botón para mover a la derecha, se agrega una velocidad en el eje x+, por lo va a la derecha
-      (Jug.Vx) += 0.003;
-      (Jug.Ax) = 0.001;                                          // Se genera una aceleración para un giro más suave
+      (Jug.Vx) += 0.004;
+      (Jug.Ax) = 0.006;                                          // Se genera una aceleración para un giro más suave
       Jug.flip = 1;                                               // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
 
@@ -711,7 +789,9 @@ Jugador Colisiones(Jugador Jug, Obstaculo obs){
     V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
     V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
     H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000);
+    H_line(Jug.Px -2, Jug.Py -2, 20, 0x0000);
     H_line(Jug.Px -2, Jug.Py +25, 20, 0x0000);
+    H_line(Jug.Px -2, Jug.Py +26, 20, 0x0000);
 
     // Dejar la gravedad constante y la variable de si está parado, en 0
     Jug.Ay = Gravedad;
