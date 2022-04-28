@@ -39,7 +39,7 @@ File Archivo;
 #define LCD_RD PE_1
 #define Izquierda_J1 PA_7
 #define Derecha_J1 PC_7
-#define Gravedad 0.0012
+#define Gravedad 0.002
 #define Game PC_6
 #define Game_over PC_7
 #define Menu PC_5
@@ -68,6 +68,8 @@ typedef struct{
   int flip;
   int parado;
   int impulso;
+  int Num_globos;
+  int Muerto;
 }
 Jugador;
 
@@ -102,12 +104,12 @@ int vector_y1 = 0;
   int Game_Over = 0;
   float t = 1.5;
   int cont_anim1 = 0;
+  int cont_anim2 = 0;
   int anim1 = 0;
   int anim2 = 0;
+  int anim3 = 0;
   int Datos_control_binario = 0b000000;
   int datos = 0;
-  int Muerto_J1 = 0;
-  int Muerto_J2 = 0;
   int Suma_vel = 0;
   int Menu_activo = 1;
   
@@ -115,13 +117,13 @@ int vector_y1 = 0;
   //***********************************************************************************************************************************
   // Declaración de objetos
   //***********************************************************************************************************************************
-  Obstaculo obs1 = {120, 96, 90, 25};                             // Se crea un objeto tipo obstáculo
-  Obstaculo obs2 = {0, 198, 66, 44};                              // Se crea un objeto tipo obstáculo
-  Obstaculo obs3 = {253, 198, 66, 44};                            // Se crea un objeto tipo obstáculo       
-  Jugador J1 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0};     // Objeto tipo "Jugador" con todos los parámetros para el mismo
-  Jugador J2 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0};     // Objeto tipo "Jugador" con todos los parámetros para el mismo
-  Control CTRL1 = {0, 0, 0};                                      // Objeto tipo control que guarda todos los parámetros mandados por el control 1
-  Control CTRL2 = {0, 0, 0};                                      // Objeto tipo control que guarda todos los parámetros mandados por el control 2
+  Obstaculo obs1 = {120, 96, 90, 25};                                     // Se crea un objeto tipo obstáculo
+  Obstaculo obs2 = {0, 198, 66, 44};                                      // Se crea un objeto tipo obstáculo
+  Obstaculo obs3 = {253, 198, 66, 44};                                    // Se crea un objeto tipo obstáculo       
+  Jugador J1 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0, 2, 0};       // Objeto tipo "Jugador" con todos los parámetros para el mismo
+  Jugador J2 = {257, 100, 16, 24, 0, 0, 0, Gravedad, 1, 0, 0, 2, 0};      // Objeto tipo "Jugador" con todos los parámetros para el mismo
+  Control CTRL1 = {0, 0, 0};                                              // Objeto tipo control que guarda todos los parámetros mandados por el control 1
+  Control CTRL2 = {0, 0, 0};                                              // Objeto tipo control que guarda todos los parámetros mandados por el control 2
 
 //***************************************************************************************************************************************
 // Functions Prototypes
@@ -150,8 +152,8 @@ Jugador Fisica_muerte(Jugador Jug);
 void Write_Text(String Texto, int CoordX, int CoordY, int ColorTexto, int ColorFondo);
 void LCD_TextCS(int x, int y, int width, int height, unsigned char bitmap[],int columns, int index, char flip, char offset, int ColorTexto, int ColorFondo);
 void Write_Num(int Numero, byte NoDigitos, int CoordX, int CoordY, int ColorTexto, int ColorFondo);
-
-
+void LCD_SpriteCS(int x, int y, int width, int height, unsigned char bitmap[],int columns, int index, char flip, char offset, char colorswap, int OldColor, int NewColor);
+void Animaciones(Jugador Jug, int Num_Jugador);
 
 //***************************************************************************************************************************************
 // Setup: Menú principal
@@ -252,6 +254,9 @@ void setup() {
 // Loop Infinito
 //***************************************************************************************************************************************
 void loop() {
+
+  // Se inicializa al jugador como vivo
+  J1.Muerto = 0;
   
   while(Game_Over == 0) {
     
@@ -278,98 +283,73 @@ void loop() {
     if((Datos_control_binario & 0b000001) == 0b000001){ CTRL2.Impulso = 1; } else { CTRL2.Impulso = 0; }
     
     //***********************************************************************************************************************************
-    // Implementación de físicas (ambos ejes) para ambos jugadores
+    // Implementación de físicas (ambos ejes) para ambos jugadores. Esto depende de si el jugador está muerto o no
     //***********************************************************************************************************************************
-    if(Muerto_J1 == 0){
+    if(J1.Muerto == 0 && J2.Muerto == 0){
       J1 = Fisicas(J1, CTRL1.Impulso, CTRL1.Izquierda, CTRL1.Derecha);
+      J2 = Fisicas(J2, CTRL2.Impulso, CTRL2.Izquierda, CTRL2.Derecha);
     }
     else{
+      if(J1.Muerto == 1){
 
-      // Impulso inicial
-      if(Suma_vel == 0){
-        J1.Vy = -0.3;
-        J1.Py += 8;
-        Suma_vel = 1;
-      }
+        // Impulso inicial para jugador 1
+        if(Suma_vel == 0){
+          J1.Vy = -0.3;
+          J1.Py += 8;
+          Suma_vel = 1;
+        }
       
-      J1 = Fisica_muerte(J1);
+        J1 = Fisica_muerte(J1);
 
-      if((J1.Py + J1.Alto - 8) > 250){
-        J1.Py = 240;
-        Muerto_J1 = 5;
-
-        for(int e = 0; e < 20; e++){
-          LCD_Bitmap(61 + 10*e, 217, 10, 22, Agua);
+        if((J1.Py + J1.Alto - 8) > 250){
+          J1.Py = 240;
+          J1.Muerto = 5;
+  
+          for(int e = 0; e < 20; e++){
+            LCD_Bitmap(61 + 10*e, 217, 10, 22, Agua);
+          }
+        }
+      }
+      else{
+        
+        // Impulso inicial para jugador 2
+        if(Suma_vel == 0){
+          J2.Vy = -0.3;
+          J2.Py += 8;
+          Suma_vel = 1;
+        }
+        
+        J2 = Fisica_muerte(J2);
+  
+        if((J2.Py + J2.Alto - 8) > 250){
+          J2.Py = 240;
+          J2.Muerto = 5;
+  
+          for(int o = 0; o < 20; o++){
+            LCD_Bitmap(61 + 10*o, 217, 10, 22, Agua);
+          }
         }
       }
     }
     
-
     //***********************************************************************************************************************************
     // Sprites y animaciones
     //***********************************************************************************************************************************
     /*
      * En este caso evaluamos el estado del jugador. Si este se encuentra sobre una superficie, si está parado sin moverse, genera una animación y si se mueve en el eje x, se genera una animación de  
-     * caminata para que el jugador tenga movilidad.
+     * caminata para que el jugador tenga movilidad. Ahora esto fue modulado para que 2 jugadores pudieran tener las mismas animaciones
      */
-    cont_anim1 += 1;
-
-    // Si el jugador se encuentra sobre una superficie:
-    if(J1.parado == 1){
-
-      // Si la velocidad en x se aproxima a 0:
-      if(abs(J1.Vx) < 0.001){
-
-        // Generar animación para estar parado
-        anim1 = (cont_anim1 / 35) % 3;
-        LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy_parado, 3, anim1, J1.flip, 0);
-      }
-
-      // Si la velocidad en x es mayor o menor a 0:
-      else{
-
-        // Generar animación para caminar
-        anim2 = (cont_anim1 / 20) % 4;
-        LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy_caminando, 4, anim2, J1.flip, 0);
-
-        // Si la velocidad es negativa, dibujar franjas para evitar ver desfase.
-        if(J1.Vx < 0){
-          V_line(J1.Px +15, J1.Py, 24, 0x0000);
-          V_line(J1.Px +16, J1.Py, 24, 0x0000);
-        }
-      }
-    }
-
-    // Si el jugador muere, entonces realizar la animación correspondiente
-    else if(Muerto_J1 == 1){
-      
-      int cont_anim2 = cont_anim2 + 1;
-      int anim3 = (cont_anim2/65) % 4;
-      LCD_Sprite(int(J1.Px), int(J1.Py), 15, 12, Muerte, 4, anim3, 0, 0);
-      
-      V_line(J1.Px -1, J1.Py, 12, 0x0000);
-      V_line(J1.Px +15, J1.Py, 12, 0x0000);
-      H_line(J1.Px -2, J1.Py -1, 19, 0x0000);
-      H_line(J1.Px -2, J1.Py +12, 19, 0x0000);
-    }
-    
-    // Si el jugador no está sobre una superficie, realizar la animación de estar volando.
-    else if(Muerto_J1 != 5){
-      if(J1.impulso == 1){
-        LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy, 5, 2, J1.flip, 0);      
-      }
-      else{
-        LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy, 5, 3, J1.flip, 0);
-      }
-    }
-    
+    Animaciones(J1, 1);
+    Animaciones(J2, 2);
 
     //***********************************************************************************************************************************
     // Colisiones Primer nivel
     //***********************************************************************************************************************************
     /*
-     * Se dividió en diferentes regiones la pantalla (en eje x) para que por región realizara las colisiones con el obstáculo que se encuentra en esa misma región. 
+     * Se dividió en diferentes regiones la pantalla (en eje x) para que por región realizara las colisiones con el obstáculo que se encuentra en esa misma región. Esto se realizó para ambos jugadores. 
      */
+
+    // Jugador 1
     if((J1.Px + J1.Ancho) > 0 && J1.Px < (obs2.Px + obs2.Ancho + 18)){
       J1 = Colisiones(J1, obs2);
     }
@@ -380,11 +360,26 @@ void loop() {
       J1 = Colisiones(J1, obs3);
     }
 
+    // Jugador 2
+    if((J2.Px + J2.Ancho) > 0 && J2.Px < (obs2.Px + obs2.Ancho + 18)){
+      J2 = Colisiones(J2, obs2);
+    }
+    else if((J2.Px + J2.Ancho) > (obs2.Px + obs2.Ancho + 18) && J2.Px < (obs1.Px + obs1.Ancho + 18)){
+      J2 = Colisiones(J2, obs1);
+    }
+    else if((J2.Px + J2.Ancho) > (obs1.Px + obs1.Ancho + 18) && J2.Px < 319){
+      J2 = Colisiones(J2, obs3);
+    }
+
     //***********************************************************************************************************************************
     // Muerte
     //***********************************************************************************************************************************
     if((J1.Py + J1.Alto) > 217){
-      Muerto_J1 = 1;
+      J1.Muerto = 1;
+    }
+
+    if((J2.Py + J2.Alto) > 217){
+      J2.Muerto = 1;
     }
     
   }
@@ -395,18 +390,108 @@ void loop() {
 //***************************************************************************************************************************************
 // Función que generar físicas cuando el jugador murió
 //***************************************************************************************************************************************
+void Animaciones(Jugador Jug, int Num_Jugador){
+
+  // Utilizar timers para animaciones
+  cont_anim1 += 1;
+  
+  if(Jug.Num_globos == 2){
+    
+    // Si el jugador se encuentra sobre una superficie:
+    if(Jug.parado == 1 && Jug.Muerto == 0){
+
+      // Si la velocidad en x se aproxima a 0:
+      if(abs(Jug.Vx) < 0.001){
+
+        // Generar animación para estar parado
+        anim1 = (cont_anim1 / 35) % 3;
+
+        if(Num_Jugador == 1){
+          LCD_Sprite(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy_parado, 3, anim1, Jug.flip, 0);
+        }
+        else{
+          LCD_SpriteCS(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy_parado, 3, anim1, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+        }
+        
+      }
+
+      // Si la velocidad en x es mayor o menor a 0:
+      else{
+
+        // Generar animación para caminar
+        anim2 = (cont_anim1 / 20) % 4;
+        
+        if(Num_Jugador == 1){
+          LCD_Sprite(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy_caminando, 4, anim2, Jug.flip, 0);
+        }
+        else{
+          LCD_SpriteCS(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy_caminando, 4, anim2, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+        }
+
+        // Si la velocidad es negativa, dibujar franjas para evitar ver desfase.
+        if(Jug.Vx < 0){
+          V_line(Jug.Px +15, Jug.Py, 24, 0x0000);
+          V_line(Jug.Px +16, Jug.Py, 24, 0x0000);
+        }
+      }
+    }
+
+    // Si el jugador muere, entonces realizar la animación correspondiente
+    else if(Jug.Muerto == 1){
+      
+      cont_anim2 += 1;
+      anim3 = (cont_anim2/68) % 4;
+      
+      if(Num_Jugador == 1){
+        LCD_Sprite(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, anim3, Jug.flip, 0);
+      }
+      else{
+        LCD_SpriteCS(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, anim3, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+      }
+      
+      V_line(Jug.Px -1, Jug.Py, 12, 0x0000);
+      V_line(Jug.Px +15, Jug.Py, 12, 0x0000);
+      H_line(Jug.Px -2, Jug.Py -1, 19, 0x0000);
+      H_line(Jug.Px -2, Jug.Py +12, 19, 0x0000);
+    }
+    
+    // Si el jugador no está sobre una superficie, realizar la animación de estar volando.
+    else if(Jug.Muerto != 5){
+      if(Jug.impulso == 1){
+        if(Num_Jugador == 1){
+          LCD_Sprite(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy, 5, 2, Jug.flip, 0);
+        }
+        else{
+          LCD_SpriteCS(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy, 5, 2, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+        }     
+      }
+      else{
+        if(Num_Jugador == 1){
+          LCD_Sprite(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy, 5, 3, Jug.flip, 0);
+        }
+        else{
+          LCD_SpriteCS(int(Jug.Px), int(Jug.Py), Jug.Ancho, Jug.Alto, Balloon_boy, 5, 3, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+        }
+      }
+    }
+  }
+}    
+    
+//***************************************************************************************************************************************
+// Función que generar físicas cuando el jugador murió
+//***************************************************************************************************************************************
 Jugador Fisica_muerte(Jugador Jug){
   // Se genera una gravedad de 0.001 y velocidad inicial de -0.2
   Jug.Ay = 0.0018;
   
-  if((Jug.Vy)<=0.5 && (Jug.Vy)>=-0.5){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+  if((Jug.Vy)<=1 && (Jug.Vy)>=-1){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
     (Jug.Vy) += (Jug.Ay)*(t);
   }
-  else if((Jug.Vy)>0.5){
-    (Jug.Vy) = 0.5;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+  else if((Jug.Vy)>1){
+    (Jug.Vy) = 1;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
   }
-  else if((Jug.Vy)<-0.5){
-    (Jug.Vy) = -0.5;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+  else if((Jug.Vy)<-1){
+    (Jug.Vy) = -1;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
   }
 
   (Jug.Py) += (Jug.Vy)*(t) + (0.5)*(Jug.Ay)*(t*t);
@@ -435,18 +520,18 @@ Jugador Fisicas_y(Jugador Jug, int Boton_impulso){
     }
     if (Boton_impulso == 0 && Jug.impulso == 1 )                // Detectar cuando el botón de impulso se soltó
     {
-      (Jug.Vy) -= 0.2;                                            // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
+      (Jug.Vy) -= 0.3;                                            // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
       Jug.impulso = 0;                                            // Cambiar variable presionado_J1 como antirebote
     }
     
-    if((Jug.Vy)<=0.5 && (Jug.Vy)>=-0.5){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+    if((Jug.Vy)<=1 && (Jug.Vy)>=-1){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
       (Jug.Vy) += (Jug.Ay)*(t);
     }
-    else if((Jug.Vy)>0.5){
-      (Jug.Vy) = 0.5;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+    else if((Jug.Vy)>1){
+      (Jug.Vy) = 1;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
     }
-    else if((Jug.Vy)<-0.5){
-      (Jug.Vy) = -0.5;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+    else if((Jug.Vy)<-1){
+      (Jug.Vy) = -1;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
     }
 
     /* 
@@ -471,23 +556,23 @@ Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der){
     if(Boton_Iz == 1)                                             // En el eje x, cuando se presiona el botón para mover a la izquierda, se agrega una velocidad en el eje x-, por lo va a la izquierda
     {
       (Jug.Vx) -= 0.003;                                                 
-      (Jug.Ax) = -0.0007;                                         // Se genera una aceleración para un giro más suave
+      (Jug.Ax) = -0.001;                                         // Se genera una aceleración para un giro más suave
       Jug.flip = 0;                                               // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
     if(Boton_Der == 1){                                           // En el eje x, cuando se presiona el botón para mover a la derecha, se agrega una velocidad en el eje x+, por lo va a la derecha
       (Jug.Vx) += 0.003;
-      (Jug.Ax) = 0.0007;                                          // Se genera una aceleración para un giro más suave
+      (Jug.Ax) = 0.001;                                          // Se genera una aceleración para un giro más suave
       Jug.flip = 1;                                               // Se utiliza la variable flip para que el sprite haga un flip dependiendo de la dirección a la que vaya
     }
 
-    if((Jug.Vx)<=0.25 && (Jug.Vx)>=-0.25){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+    if((Jug.Vx)<=0.5 && (Jug.Vx)>=-0.5){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
       (Jug.Vx) += (Jug.Ax)*(t);
     }
-    else if((Jug.Vx)>0.25){
-      (Jug.Vx) = 0.25;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+    else if((Jug.Vx)>0.5){
+      (Jug.Vx) = 0.5;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
     }
-    else if(Jug.Vx<-0.25){
-      (Jug.Vx) = -0.25;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+    else if(Jug.Vx<-0.5){
+      (Jug.Vx) = -0.5;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
     }
 
     /* 
@@ -1219,5 +1304,58 @@ void LCD_Sprite(int x, int y, int width, int height, unsigned char bitmap[], int
 
 
   }
+  digitalWrite(LCD_CS, HIGH);
+}
+
+//***************************************************************************************************************************************
+// Función para dibujar una imagen sprite - los parámetros columns = número de imagenes en el sprite, index = cual desplegar, flip = darle vuelta, colorswap == si se quiere un cambio de color.
+//***************************************************************************************************************************************
+void LCD_SpriteCS(int x, int y, int width, int height, unsigned char bitmap[],int columns, int index, char flip, char offset, char colorswap, int OldColor, int NewColor){
+  LCD_CMD(0x02c); // write_memory_start
+  digitalWrite(LCD_RS, HIGH);
+  digitalWrite(LCD_CS, LOW); 
+
+  unsigned int x2, y2;
+  x2 =   x+width;
+  y2=    y+height;
+  SetWindows(x, y, x2-1, y2-1);
+  int k = 0;
+  int ancho = ((width*columns));
+  
+  if(flip){
+    for (int j = 0; j < height; j++){
+      k = (j*(ancho) + index*width -1 - offset)*2;
+      k = k+width*2;
+      for (int i = 0; i < width; i++){
+        if (colorswap == 1 && highByte(OldColor) == bitmap[k] && lowByte(OldColor) == bitmap[k+1]){
+          LCD_DATA(NewColor >> 8);
+          LCD_DATA(NewColor);
+        }
+        else{
+          LCD_DATA(bitmap[k]);
+          LCD_DATA(bitmap[k+1]);
+        }
+        k = k - 2;
+      } 
+    }
+  }
+  
+  else{
+    for (int j = 0; j < height; j++){
+      k = (j*(ancho) + index*width + 1 + offset)*2;
+      for (int i = 0; i < width; i++){
+        if (colorswap == 1 && highByte(OldColor) == bitmap[k] && lowByte(OldColor) == bitmap[k+1]){
+          LCD_DATA(NewColor >> 8);
+          LCD_DATA(NewColor);
+        }
+        else{
+          LCD_DATA(bitmap[k]);
+          LCD_DATA(bitmap[k+1]);
+        }
+        k = k + 2;
+      }
+    } 
+  }
+  
   digitalWrite(LCD_CS, HIGH);
 }
