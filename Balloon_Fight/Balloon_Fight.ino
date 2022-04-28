@@ -120,6 +120,7 @@ int vector_y1 = 0;
   int Menu_activo = 1;
   int agua = 0;
   float distancia_centros = 0;
+  int tiempo_max_muerte = 0;
   
 
   //***********************************************************************************************************************************
@@ -313,6 +314,9 @@ void loop() {
     else{
       if(J1.Muerto == 1 || J1.Num_globos == 0){ 
 
+        // Contador para frames de muerte
+        tiempo_max_muerte += 1;
+        
         // Impulso inicial para jugador 1
         if(Suma_vel == 0){                                                      
           J1.Vy = -0.3;
@@ -327,13 +331,15 @@ void loop() {
          * NOTA: Se mueve al jugador al momento de morir, pues el sprite de muerte es menor al ancho y alto del jugador normal, por lo que es necesario moverlo un poco para que el antiguo
          * sprite del jugador normal, deje de verse y la animación se vea muy bien
          */
-        if((J1.Py + J1.Alto - 8) > 250){
+        if((J1.Py + J1.Alto - 8) > 250 || tiempo_max_muerte > 100){
           J1.Py = 240;
           J1.Muerto = 5;
   
           for(int e = 0; e < 20; e++){
             LCD_Bitmap(61 + 10*e, 217, 10, 22, Agua);
-          }
+         }
+
+         
 
           // Cuando jugador 1 muere, colocar Game_Over en 1 y realizar un break para que salga del loop de forma inmediata.
           Game_Over = 1;
@@ -342,6 +348,9 @@ void loop() {
         }
       }
       else if(J2.Muerto == 1 || J2.Num_globos == 0){
+
+        // Contador para frames de muerte
+        tiempo_max_muerte += 1;
         
         // Impulso inicial para jugador 2
         if(Suma_vel == 0){
@@ -353,7 +362,7 @@ void loop() {
         // Generar físicas cuando el jugador muere
         J2 = Fisica_muerte(J2);
   
-        if((J2.Py + J2.Alto - 8) > 250){
+        if((J2.Py + J2.Alto - 8) > 250 || tiempo_max_muerte > 100){
           J2.Py = 240;
           J2.Muerto = 5;
   
@@ -522,9 +531,6 @@ Jugadores Colisiones_JvJ(Jugador Jug, Jugador Jug2){
 
       // Chequeo de que region es en la que se encuentra
       int variable_region = Regiones(Jug.Px, Jug.Py, Jug.Alto, Jug.Ancho, Jug2.Px, Jug2.Py, Jug2.Ancho, Jug2.Alto);
-
-      Serial.print("REGION: ");
-      Serial.println(variable_region);
        
       // Si se encuentra en la región superior al obstáculo
       if(variable_region == 1){ 
@@ -537,10 +543,11 @@ Jugadores Colisiones_JvJ(Jugador Jug, Jugador Jug2){
         V_line(Jug.Px -2, Jug.Py, 24, 0x0000);
     
         // Alteración a velocidades y aceleración                                   
-        Jug.Vy = (-1.2*Jug.Vy);
-        Jug.Ay = (-Jug.Ay);                                  // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
+        Jug.Vy = (-1.15*Jug.Vy);
+        Jug.Ay = (-Jug.Ay);                                     // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
         Jug2.Vy = (-Jug2.Vy);
-        Jug2.Ay = (-Jug2.Ay);                                  // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
+        Jug2.Ay = (-Jug2.Ay);                                   // Si no se setea la aceleración como 0, poco a poco el sprite se mete en el obstáculo
+        Jug.Py -= 8;
         Jug2.Num_globos -= 1;
 
         LCD_SpriteCS(Jug2.Px, Jug2.Py, Jug2.Ancho, Jug2.Alto, Balloon_boy_globo_R, 1, 1, Jug2.flip, 0, 1, 0x21dd, 0x2CC5);
@@ -554,6 +561,8 @@ Jugadores Colisiones_JvJ(Jugador Jug, Jugador Jug2){
         V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
         H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000);
         H_line(Jug.Px -2, Jug.Py +25, 20, 0x0000);
+        H_line(Jug.Px -2, Jug.Py +26, 20, 0x0000);
+        H_line(Jug.Px -2, Jug.Py +27, 20, 0x0000);
       
         // Alteración de la velocidad en x
         Jug.Vx = (-(Jug.Vx));
@@ -584,12 +593,12 @@ Jugadores Colisiones_JvJ(Jugador Jug, Jugador Jug2){
         V_line(Jug.Px +17, Jug.Py, 24, 0x0000);
         V_line(Jug.Px -1, Jug.Py, 24, 0x0000);
         H_line(Jug.Px -2, Jug.Py -1, 20, 0x0000);
+        H_line(Jug.Px -2, Jug.Py -2, 20, 0x0000);
     
         // Alteración a velocidades y aceleración                                   
-        Jug.Vy = ((-0.88)*(Jug.Vy));
-        Jug.Ay = ((-0.88)*(Jug.Ay));                                  
-        Jug2.Vy = ((-0.88)*(Jug2.Vy));
-        Jug2.Ay = ((-0.88)*(Jug2.Ay));                                  
+        Jug.Vy = ((-Jug.Vy));                                 
+        Jug2.Vy = ((-1.15)*(Jug2.Vy)); 
+        Jug2.Py -= 8;                                 
         Jug.Num_globos -= 1;
 
         LCD_Sprite(Jug.Px, Jug.Py, Jug.Ancho, Jug.Alto, Balloon_boy_globo_R, 1, 1, Jug.flip, 0);
@@ -708,14 +717,11 @@ void Animaciones(Jugador Jug, int Num_Jugador){
     // Si el jugador muere, entonces realizar la animación correspondiente
     else if(Jug.Muerto == 1){
       
-      cont_anim2 += 1;
-      anim3 = (cont_anim2/68) % 4;
-      
       if(Num_Jugador == 1){
-        LCD_Sprite(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, anim3, Jug.flip, 0);
+        LCD_Sprite(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, 3, Jug.flip, 0);
       }
       else{
-        LCD_SpriteCS(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, anim3, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+        LCD_SpriteCS(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, 3, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
       }
       
       V_line(Jug.Px -1, Jug.Py, 12, 0x0000);
@@ -802,14 +808,12 @@ void Animaciones(Jugador Jug, int Num_Jugador){
     // Si el jugador muere, entonces realizar la animación correspondiente
     else if(Jug.Muerto == 1){
       
-      cont_anim2 += 1;
-      anim3 = (cont_anim2/68) % 4;
       
       if(Num_Jugador == 1){
-        LCD_Sprite(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, anim3, Jug.flip, 0);
+        LCD_Sprite(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, 3, Jug.flip, 0);
       }
       else{
-        LCD_SpriteCS(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, anim3, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+        LCD_SpriteCS(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, 3, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
       }
       
       V_line(Jug.Px -1, Jug.Py, 12, 0x0000);
@@ -850,10 +854,10 @@ void Animaciones(Jugador Jug, int Num_Jugador){
   // Si el jugador se queda sin globos, indicar que el jugador murió
   else{
     if(Num_Jugador == 1){
-      LCD_Sprite(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, 1, Jug.flip, 0);
+      LCD_Sprite(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, 3, Jug.flip, 0);
     }
     else{
-      LCD_SpriteCS(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, 1, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
+      LCD_SpriteCS(int(Jug.Px), int(Jug.Py), 15, 12, Muerte, 4, 3, Jug.flip, 0, 1, 0x21dd, 0x2CC5);
     }
     
     V_line(Jug.Px -1, Jug.Py, 12, 0x0000);
@@ -869,7 +873,7 @@ void Animaciones(Jugador Jug, int Num_Jugador){
 //***************************************************************************************************************************************
 Jugador Fisica_muerte(Jugador Jug){
   // Se genera una gravedad de 0.001 y velocidad inicial de -0.2
-  Jug.Ay = 0.0018;
+  Jug.Ay = 0.002;
   
   if((Jug.Vy)<=1 && (Jug.Vy)>=-1){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
     (Jug.Vy) += (Jug.Ay)*(t);
@@ -1151,25 +1155,26 @@ int Check_overlap(int posx_poligono, int posy_poligono, int posx_jugador, int po
 int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obstaculo, int posy_obstaculo, int ancho_obstaculo, int alto_obstaculo){
 
   // Pestaña: Arriba
-  if(posx_J1 >= (posx_obstaculo) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo) && (posy_J1 + (0.5)*alto_J1) <= (posy_obstaculo)){
+  if((posx_J1 + 0.9*ancho_J1) >= (posx_obstaculo) && (posx_J1 + 0.1*ancho_J1) <= (posx_obstaculo + ancho_obstaculo) && (posy_J1 + (0.5)*alto_J1) <= (posy_obstaculo)){
     return 1;                                                  
   }
 
   // Pestaña: Izquierda
-  else if((posy_J1 + alto_J1) <= (posy_obstaculo + alto_obstaculo) && (posy_J1) >= (posy_obstaculo) && (posx_J1) <= posx_obstaculo){
+  else if((posy_J1 + 0.1*alto_J1) <= (posy_obstaculo + alto_obstaculo) && (posy_J1 + 0.9*alto_J1) >= (posy_obstaculo) && (posx_J1) <= posx_obstaculo){
     return 2;                                                    
   }
 
   // Pestaña: Derecha
-  else if((posy_J1 + alto_J1) <= (posy_obstaculo + alto_obstaculo) && (posy_J1) >= (posy_obstaculo) && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo)){
+  else if((posy_J1 + 0.1*alto_J1) <= (posy_obstaculo + alto_obstaculo) && (posy_J1 + 0.9*alto_J1) >= (posy_obstaculo) && (posx_J1 + ancho_J1) >= (posx_obstaculo + ancho_obstaculo)){
     return 3;                                                    
   }
 
   // Pestaña: Abajo
-  else if(posx_J1 >= (posx_obstaculo) && (posx_J1 + ancho_J1) <= (posx_obstaculo + ancho_obstaculo) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo )){
+  else if((posx_J1 + 0.9*ancho_J1) >= (posx_obstaculo) && (posx_J1 + 0.1*ancho_J1) <= (posx_obstaculo + ancho_obstaculo) && (posy_J1 + alto_J1) >= (posy_obstaculo + alto_obstaculo )){
     return 4;                                                    
   }
 
+  // Si el centro del jugador se encuentra adentro del obstáculo
   else if((posx_J1 + 0.5*ancho_J1) > posx_obstaculo && (posx_J1 + 0.5*ancho_J1) < (posx_obstaculo + ancho_obstaculo) && (posy_J1 + 0.5*alto_J1) > posy_obstaculo && (posy_J1 + 0.5*alto_J1) < (posy_obstaculo + 0.5*alto_obstaculo)){
     return 5;
   } 
