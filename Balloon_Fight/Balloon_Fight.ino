@@ -27,6 +27,8 @@
 #include "lcd_registers.h"
 #include <SD.h>
 
+File Archivo;
+
 //***************************************************************************************************************************************
 // Definiciones de pines
 //***************************************************************************************************************************************
@@ -35,13 +37,13 @@
 #define LCD_RS PD_2
 #define LCD_WR PD_3
 #define LCD_RD PE_1
-#define Jugador_1 PE_4
 #define Izquierda_J1 PA_7
 #define Derecha_J1 PC_7
 #define Gravedad 0.0012
 #define Game PC_6
 #define Game_over PC_7
 #define Menu PC_5
+#define Start PE_4
 
 //***************************************************************************************************************************************
 // Structs
@@ -107,15 +109,17 @@ int vector_y1 = 0;
   int Muerto_J1 = 0;
   int Muerto_J2 = 0;
   int Suma_vel = 0;
+  int Menu_activo = 1;
   
 
   //***********************************************************************************************************************************
   // Declaración de objetos
   //***********************************************************************************************************************************
-  Obstaculo obs1 = {110, 96, 90, 25};                             // Se crea un objeto tipo obstáculo
-  Obstaculo obs2 = {0, 198, 70, 44};                              // Se crea un objeto tipo obstáculo
-  Obstaculo obs3 = {250, 198, 70, 44};                            // Se crea un objeto tipo obstáculo       
+  Obstaculo obs1 = {120, 96, 90, 25};                             // Se crea un objeto tipo obstáculo
+  Obstaculo obs2 = {0, 198, 66, 44};                              // Se crea un objeto tipo obstáculo
+  Obstaculo obs3 = {253, 198, 66, 44};                            // Se crea un objeto tipo obstáculo       
   Jugador J1 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0};     // Objeto tipo "Jugador" con todos los parámetros para el mismo
+  Jugador J2 = {50, 100, 16, 24, 0, 0, 0, Gravedad, 0, 0, 0};     // Objeto tipo "Jugador" con todos los parámetros para el mismo
   Control CTRL1 = {0, 0, 0};                                      // Objeto tipo control que guarda todos los parámetros mandados por el control 1
   Control CTRL2 = {0, 0, 0};                                      // Objeto tipo control que guarda todos los parámetros mandados por el control 2
 
@@ -125,6 +129,8 @@ int vector_y1 = 0;
 void LCD_Init(void);
 void LCD_CMD(uint8_t cmd);
 void LCD_DATA(uint8_t data);
+void LCD_BitmapSD(int x, int y, int width, int height, String TXT);
+
 void SetWindows(unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2);
 void LCD_Clear(unsigned int c);
 void H_line(unsigned int x, unsigned int y, unsigned int l, unsigned int c);
@@ -141,10 +147,14 @@ Jugador Fisicas_x(Jugador Jug, int Boton_Iz, int Boton_Der);
 Jugador Fisicas_y(Jugador Jug, int Boton_impulso);
 Jugador Fisicas(Jugador Jug, int Boton_impulso, int Boton_Iz, int Boton_Der);
 Jugador Fisica_muerte(Jugador Jug);
+void Write_Text(String Texto, int CoordX, int CoordY, int ColorTexto, int ColorFondo);
+void LCD_TextCS(int x, int y, int width, int height, unsigned char bitmap[],int columns, int index, char flip, char offset, int ColorTexto, int ColorFondo);
+void Write_Num(int Numero, byte NoDigitos, int CoordX, int CoordY, int ColorTexto, int ColorFondo);
+
 
 
 //***************************************************************************************************************************************
-// Inicialización
+// Setup: Menú principal
 //***************************************************************************************************************************************
 void setup() {
   
@@ -159,9 +169,10 @@ void setup() {
   LCD_Init();
   LCD_Clear(0x00);
 
-  pinMode(Jugador_1, INPUT);
-  pinMode(Izquierda_J1, INPUT);
-  pinMode(Derecha_J1, INPUT);
+  if (!SD.begin(PA_3)) Serial.println("Inicialización SD: Inicialización fallida!");
+  else Serial.println("Inicialización SD: Inicialización existosa!");
+
+  pinMode(Start, INPUT);
 
   pinMode(Game, OUTPUT);
   pinMode(Game_over, OUTPUT);
@@ -169,14 +180,71 @@ void setup() {
 
 
   FillRect(0, 0, 319, 239, 0x0000);
+  
+  //*************************************************************************************************************************************
+  // Menú principal
+  //*************************************************************************************************************************************
+  /*
+   * Se creó una variable llamada "Menu activo", la cual hace que el menú principal permanezca colocado durante todo el tiempo que el usuario
+   * no presione el botón indicado de inicio.
+   */
+  while(Menu_activo == 1){
+    
+    // Se realiza la subrutina LCD_BitmapSD, para que se extraiga el título y el símbolo de globo de ahí 
+    LCD_BitmapSD(50, 35, 224, 104, "Titulo.txt");
+    LCD_BitmapSD(105, 170, 8, 8, "Globito.txt");
+    
+    // Escritura del texto "Press start" y las credenciales a Nintendo 
+    Write_Text("PRESS START", 120, 170, 0xffff, 0x0000);
+    Write_Text("c", 105, 220, 0xffff, 0x0000);
+    Write_Num(1984, 4, 113, 220, 0xffff, 0x0000);
+    Write_Text(" NINTENDO", 145, 220, 0xffff, 0x0000);
+
+    
+    // Chequear el valor de los controles para saber si se presionó el botón "A" para ingresar al juego
+    while(Serial2.available()){
+      
+      // Guardar las variables que el control envia
+      Datos_control_binario = Serial2.read();
+
+      // Si el botón de impulso del jugador 1 es presionado, el menú dejará de estar disponible y se podrá jugar 
+      if(Datos_control_binario == 8){
+        Menu_activo = 0;
+      }
+    }
+    
+  }
+  
 
   //*************************************************************************************************************************************
-  // Primer Nivel
+  // Impresión del campo de batalla entre jugadores
   //*************************************************************************************************************************************
-  LCD_Bitmap(obs1.Px + 4, obs1.Py + 4, obs1.Ancho - 6, obs1.Alto - 6, Obstaculo_aire);
-  LCD_Bitmap(obs2.Px , obs2.Py + 4, obs2.Ancho - 6, obs2.Alto - 7, Obstaculo_esquina);
-  LCD_Bitmap(obs3.Px + 7, obs3.Py + 4, obs3.Ancho - 6, obs3.Alto - 6, Obstaculo_esquina);
-  LCD_Bitmap(64, 217, 193, 22, Agua);
+  LCD_Clear(0x00);
+
+  /*
+   * Se realizó un for para cada uno de los obstaculos impresos. Esto se debe a que los obstáculos son de tamaño reducido, por lo que hay que dibujarlos cada ciertos espacios
+   * para alcanzar el tamaño de obstáculo requerido.
+   */
+
+  // Dibujar obstaculo central aereo
+  for(int i = 0; i < 13; i++){
+    LCD_Bitmap((obs1.Px + 4) + 6*i, obs1.Py + 4, 6, 19, Obstaculo_aire);                
+  }
+
+  // Dibujar obstaculo de la esquina inferior izquierda
+  for(int j = 0; j < 9; j++){
+    LCD_Bitmap((obs2.Px) + 7*j, obs2.Py + 4, 7, 37, Obstaculo_esquina);
+  }
+
+  // Dibujar obstaculo de la esquina inferior derecha
+  for(int h = 0; h < 9; h++){
+    LCD_Bitmap((250 + 7) + 7*h, obs3.Py + 4, 7, 37, Obstaculo_esquina);
+  }
+
+  // Dibujar el agua central
+  for(int a = 0; a < 20; a++){
+    LCD_Bitmap(61 + 10*a, 217, 10, 22, Agua);
+  }
 
 
 }
@@ -230,7 +298,9 @@ void loop() {
         J1.Py = 240;
         Muerto_J1 = 5;
 
-        LCD_Bitmap(64, 217, 193, 22, Agua);
+        for(int e = 0; e < 20; e++){
+          LCD_Bitmap(61 + 10*e, 217, 10, 22, Agua);
+        }
       }
     }
     
@@ -636,6 +706,8 @@ int Regiones(int posx_J1, int posy_J1, int alto_J1, int ancho_J1, int posx_obsta
   }
 }
 
+
+
 //***************************************************************************************************************************************
 // Función para inicializar LCD
 //***************************************************************************************************************************************
@@ -923,6 +995,119 @@ void LCD_Print(String text, int x, int y, int fontSize, int color, int backgroun
     digitalWrite(LCD_CS, HIGH);
   }
 }
+
+//***************************************************************************************************************************************
+// Función para dibujar en la LCD, el texto que querramos
+//***************************************************************************************************************************************
+void Write_Text(String Texto, int CoordX, int CoordY, int ColorTexto, int ColorFondo) {
+ 
+  int NoCaracteres = Texto.length();                        // Se obtiene el número de caracteres en el String escrito
+  char Caracteres[NoCaracteres + 1];                        // Se crea un array con el tamaño del número de caracteres
+  Texto.toCharArray(Caracteres, NoCaracteres + 1);          // Se almacena cada caracter individual 
+
+  byte Flip = 1;                                            // Si se ingresa 0, el caracter se "flipea" horizontalmente. Solo utilizado para el triángulo apuntando a la izquierda
+  byte IndiceSprite = 10;                                   // Si se ingresa un valor válido, el algoritmo coloca como default un espacio
+  for (int i = 0; i < NoCaracteres; i++){
+    switch(Caracteres[i]){
+      case 99:  IndiceSprite = 0; break;                     // ASCII: 'c'  |  Sprite: Copyright                           
+      case 62:  IndiceSprite = 1; break;                     // ASCII: '>'  |  Sprite: ->
+      case 42:  IndiceSprite = 2; break;                     // ASCII: '*'  |  Sprite: "
+      case 41:  IndiceSprite = 3; break;                     // ASCII: ')'  |  Sprite: )
+      case 40:  IndiceSprite = 4; break;                     // ASCII: '('  |  Sprite: (
+      case 91:  IndiceSprite = 5; break;                     // ASCII: '['  |  Sprite: Guión pegado a la izquierda
+      case 93:  IndiceSprite = 6; break;                     // ASCII: ']'  |  Sprite: Guión pegado a la derecha
+      case 33:  IndiceSprite = 7; break;                     // ASCII: '!'  |  Sprite: !
+      case 47:  IndiceSprite = 8; break;                     // ASCII: '/'  |  Sprite: /
+      case 123: IndiceSprite = 9; Flip = 0; break;           // ASCII: '{'  |  Sprite: Triangulo apuntando a la izquierda (Triangulo derecho "flipeado") 
+      case 125: IndiceSprite = 9; break;                     // ASCII: '}'  |  Sprite: Triangulo apuntando a la derecha
+      case 39:  IndiceSprite = 10; break;                    // ASCII: '''  |  Sprite: '
+      case 44:  IndiceSprite = 11; break;                    // ASCII: ','  |  Sprite: ,
+      case 45:  IndiceSprite = 12; break;                    // ASCII: '-'  |  Sprite: -
+      case 32:  IndiceSprite = 13; break;                    // ASCII: ' '  |  Sprite: Espacio
+      default:                                              // ASCII: Letras
+        IndiceSprite = 39 - (Caracteres[i] - 65);
+        break;
+    }
+    // Parámetros(Coordenada X, Coordenada Y, Ancho, Alto, NombreSprite, Total de Sprites, No. de Sprite, Flip, Offset, Color Texto, Color Fondo) 
+    LCD_TextCS(CoordX + 8*i, CoordY, 8, 8, Letras, 40, IndiceSprite, Flip, 0, ColorTexto, ColorFondo);
+  }
+}
+
+//***************************************************************************************************************************************
+// Función para dibujar numeros en la LCD
+//***************************************************************************************************************************************
+void Write_Num(int Numero, byte NoDigitos, int CoordX, int CoordY, int ColorTexto, int ColorFondo){
+  
+  int Divisor = 10;
+  int Digitos[NoDigitos + 1];
+  
+  Digitos[0] = Numero % Divisor;
+
+  for (int i = 1; i < NoDigitos; i++){
+    Digitos[i] = (Numero % (Divisor * 10) - Numero % Divisor) / Divisor; 
+    Divisor = Divisor * 10;
+  }
+
+  for (int i = 0; i < NoDigitos; i++){
+    int IndiceSprite = 9 - Digitos[i];
+    LCD_TextCS(CoordX + 8*(NoDigitos - 1) - 8*i, CoordY, 8, 8, Numeros, 10, IndiceSprite, 1, 0, ColorTexto, ColorFondo);
+  }
+
+}
+
+//***************************************************************************************************************************************
+// Función para dibujar una letra o caracter especial a partir de el sprite "Letras"
+//***************************************************************************************************************************************
+void LCD_TextCS(int x, int y, int width, int height, unsigned char bitmap[],int columns, int index, char flip, char offset, int ColorTexto, int ColorFondo){
+  LCD_CMD(0x02c); // write_memory_start
+  digitalWrite(LCD_RS, HIGH);
+  digitalWrite(LCD_CS, LOW); 
+
+  unsigned int x2, y2;
+  x2 =   x+width;
+  y2=    y+height;
+  SetWindows(x, y, x2-1, y2-1);
+  int k = 0;
+  int ancho = ((width*columns));
+  
+  if(flip){
+    for (int j = 0; j < height; j++){
+      k = (j*(ancho) + index*width -1 - offset)*2;
+      k = k+width*2;
+      for (int i = 0; i < width; i++){
+        if (bitmap[k] == 0xff && bitmap[k+1] == 0xff){
+          LCD_DATA(ColorTexto >> 8);
+          LCD_DATA(ColorTexto);
+        }
+        else if(bitmap[k] == 0x00 && bitmap[k+1] == 0x00){
+          LCD_DATA(ColorFondo >> 8);
+          LCD_DATA(ColorFondo);
+        }
+        k = k - 2;
+      } 
+    }
+  }
+  
+  else{
+    for (int j = 0; j < height; j++){
+      k = (j*(ancho) + index*width + 1 + offset)*2;
+      for (int i = 0; i < width; i++){
+        if (bitmap[k] == 0xff && bitmap[k+1] == 0xff){
+          LCD_DATA(ColorTexto >> 8);
+          LCD_DATA(ColorTexto);
+        }
+        else if(bitmap[k] == 0x00 && bitmap[k+1] == 0x00){
+          LCD_DATA(ColorFondo >> 8);
+          LCD_DATA(ColorFondo);
+        }
+        k = k + 2;
+      }
+    } 
+  }
+  
+  digitalWrite(LCD_CS, HIGH);
+}
+
 //***************************************************************************************************************************************
 // Función para dibujar una imagen a partir de un arreglo de colores (Bitmap) Formato (Color 16bit R 5bits G 6bits B 5bits)
 //***************************************************************************************************************************************
@@ -948,6 +1133,56 @@ void LCD_Bitmap(unsigned int x, unsigned int y, unsigned int width, unsigned int
   }
   digitalWrite(LCD_CS, HIGH);
 }
+
+//***************************************************************************************************************************************
+// Función para dibujar una imagen a partir de un arreglo de colores (Bitmap) extraido de la memoría SD
+//***************************************************************************************************************************************
+void LCD_BitmapSD(int x, int y, int width, int height, String TXT){
+  
+  /*
+   * Función para poder extraer algún archivo de la memoria SD y de esa forma ahorrar espacio en la memoria RAM de la TIVA C
+   */
+  
+  LCD_CMD(0x02c); // write_memory_start
+  digitalWrite(LCD_RS, HIGH);
+  digitalWrite(LCD_CS, LOW); 
+
+  int Num_Caracteres = TXT.length();                          // Se obtiene el número de caracteres en el String escrito
+  char Nombre_archivo[Num_Caracteres + 1];                      // Se crea un array con el tamaño del número de caracteres
+  TXT.toCharArray(Nombre_archivo, Num_Caracteres + 1);          // Se almacena cada caracter individual 
+  Archivo = SD.open(Nombre_archivo);  
+  
+  char NibbleH = 0; 
+  char NibbleL = 0;
+  byte ConversionH = 0;
+  byte ConversionL = 0;
+  int DatosSD[2];
+
+  unsigned int x2, y2;
+  x2 =   x+width;
+  y2=    y+height;
+  SetWindows(x, y, x2-1, y2-1);
+
+  if (Archivo){
+    for (int j = 0; j < height; j++){
+      for (int i = 0; i < width; i++){
+        for (int k = 0; k < 2; k++){
+          while (Archivo.read() != 'x');
+          NibbleH = Archivo.read();
+          NibbleL = Archivo.read();
+          if (NibbleH > 96) ConversionH = 87; else ConversionH = 48;
+          if (NibbleL > 96) ConversionL = 87; else ConversionL = 48;
+          DatosSD[k] = (NibbleH - ConversionH)*16 + (NibbleL - ConversionL);
+          LCD_DATA(DatosSD[k]);
+        }
+      }
+    } 
+  }
+  
+  Archivo.close();
+  digitalWrite(LCD_CS, HIGH);
+}
+
 //***************************************************************************************************************************************
 // Función para dibujar una imagen sprite - los parámetros columns = número de imagenes en el sprite, index = cual desplegar, flip = darle vuelta
 //***************************************************************************************************************************************
