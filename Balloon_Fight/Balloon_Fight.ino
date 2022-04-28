@@ -106,6 +106,7 @@ int vector_y1 = 0;
   int datos = 0;
   int Muerto_J1 = 0;
   int Muerto_J2 = 0;
+  int Suma_vel = 0;
   
 
   //***********************************************************************************************************************************
@@ -189,7 +190,7 @@ void loop() {
     //***********************************************************************************************************************************
     // Musica
     //***********************************************************************************************************************************
-    digitalWrite(Game, HIGH);
+    digitalWrite(Game, LOW);
     
     //***********************************************************************************************************************************
     // Lectura de botones provenientes de los controles (ESP32)
@@ -215,7 +216,22 @@ void loop() {
       J1 = Fisicas(J1, CTRL1.Impulso, CTRL1.Izquierda, CTRL1.Derecha);
     }
     else{
+
+      // Impulso inicial
+      if(Suma_vel == 0){
+        J1.Vy = -0.3;
+        J1.Py += 8;
+        Suma_vel = 1;
+      }
       
+      J1 = Fisica_muerte(J1);
+
+      if((J1.Py + J1.Alto - 8) > 250){
+        J1.Py = 240;
+        Muerto_J1 = 5;
+
+        LCD_Bitmap(64, 217, 193, 22, Agua);
+      }
     }
     
 
@@ -254,8 +270,21 @@ void loop() {
       }
     }
 
+    // Si el jugador muere, entonces realizar la animación correspondiente
+    else if(Muerto_J1 == 1){
+      
+      int cont_anim2 = cont_anim2 + 1;
+      int anim3 = (cont_anim2/65) % 4;
+      LCD_Sprite(int(J1.Px), int(J1.Py), 15, 12, Muerte, 4, anim3, 0, 0);
+      
+      V_line(J1.Px -1, J1.Py, 12, 0x0000);
+      V_line(J1.Px +15, J1.Py, 12, 0x0000);
+      H_line(J1.Px -2, J1.Py -1, 19, 0x0000);
+      H_line(J1.Px -2, J1.Py +12, 19, 0x0000);
+    }
+    
     // Si el jugador no está sobre una superficie, realizar la animación de estar volando.
-    else{
+    else if(Muerto_J1 != 5){
       if(J1.impulso == 1){
         LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy, 5, 2, J1.flip, 0);      
       }
@@ -263,6 +292,7 @@ void loop() {
         LCD_Sprite(int(J1.Px), int(J1.Py), J1.Ancho, J1.Alto, Balloon_boy, 5, 3, J1.flip, 0);
       }
     }
+    
 
     //***********************************************************************************************************************************
     // Colisiones Primer nivel
@@ -295,17 +325,24 @@ void loop() {
 //***************************************************************************************************************************************
 // Función que generar físicas cuando el jugador murió
 //***************************************************************************************************************************************
-//Jugador Fisica_muerte(Jugador Jug){
-//  // Se genera una gravedad de 0.001 y velocidad inicial de -0.2
-//  Jug.Ay = Gravedad;
-//  Jug.Vy = -0.4;
-//  
-//  (Jug.Py) += (Jug.Vy)*(t) + (0.5)*(Jug.Ay)*(t*t); 
-//  
-//
-//
-//  return(Jug);
-//}
+Jugador Fisica_muerte(Jugador Jug){
+  // Se genera una gravedad de 0.001 y velocidad inicial de -0.2
+  Jug.Ay = 0.0018;
+  
+  if((Jug.Vy)<=0.5 && (Jug.Vy)>=-0.5){                          // Para evitar que el jugador comience a acelerar, se detiene la velocidad cuando esta llega a 1 o a -1 (movimiento hacia arriba)
+    (Jug.Vy) += (Jug.Ay)*(t);
+  }
+  else if((Jug.Vy)>0.5){
+    (Jug.Vy) = 0.5;                                             // Si la velocidad se vuelve mayor a 1, la velocidad se detiene en 1 para evitar la constante aceleración hacia abajo.
+  }
+  else if((Jug.Vy)<-0.5){
+    (Jug.Vy) = -0.5;                                            // Si la velocidad se vuelve menor a -1, la velocidad se detiene en -1 para evitar la constante aceleración hacia arriba.
+  }
+
+  (Jug.Py) += (Jug.Vy)*(t) + (0.5)*(Jug.Ay)*(t*t);
+  
+  return(Jug);
+}
 
 //***************************************************************************************************************************************
 // Función que genera el conjunto de físicas para 1 solo jugador
@@ -328,7 +365,7 @@ Jugador Fisicas_y(Jugador Jug, int Boton_impulso){
     }
     if (Boton_impulso == 0 && Jug.impulso == 1 )                // Detectar cuando el botón de impulso se soltó
     {
-      (Jug.Vy) -= 0.4;                                            // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
+      (Jug.Vy) -= 0.2;                                            // Cuando se presiona un botón, este añade velocidad de hacia arriba, por lo que genera una desaceleración                             
       Jug.impulso = 0;                                            // Cambiar variable presionado_J1 como antirebote
     }
     
